@@ -1,0 +1,112 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Mode {
+  INDEPENDENT
+  MANAGED
+}
+
+enum Role {
+  SELF
+  MEMBER
+  COACH
+  ADMIN
+}
+
+enum Tier {
+  FREE
+  PREMIUM
+}
+
+model Gym {
+  id             String   @id @default(cuid())
+  name           String
+  slug           String   @unique
+  logoUrl        String?
+  primaryColor   String?
+  secondaryColor String?
+  customDomain   String?  @unique
+  createdAt      DateTime @default(now())
+
+  users         User[]
+  workouts      Workout[]
+  measurements  Measurement[]
+  notifications Notification[]
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  gymId         String?
+  mode          Mode      @default(INDEPENDENT)
+  role          Role      @default(SELF)
+  tier          Tier      @default(FREE)
+  isBlocked     Boolean   @default(false)
+  blockedReason String?
+  blockedAt     DateTime?
+  joinedGymAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  gym                   Gym?           @relation(fields: [gymId], references: [id])
+  workouts              Workout[]      @relation("WorkoutOwner")
+  workoutsCreated       Workout[]      @relation("WorkoutCreator")
+  measurements          Measurement[]  @relation("MeasurementOwner")
+  measurementsCreated   Measurement[]  @relation("MeasurementCreator")
+  notificationsReceived Notification[] @relation("NotificationReceiver")
+  notificationsSent     Notification[] @relation("NotificationSender")
+}
+
+model Workout {
+  id              String   @id @default(cuid())
+  userId          String
+  gymId           String?
+  createdById     String?
+  name            String
+  exercises       Json
+  durationMinutes Int
+  caloriesBurned  Float?
+  performedAt     DateTime
+  createdAt       DateTime @default(now())
+
+  user      User  @relation("WorkoutOwner", fields: [userId], references: [id])
+  gym       Gym?  @relation(fields: [gymId], references: [id])
+  createdBy User? @relation("WorkoutCreator", fields: [createdById], references: [id])
+}
+
+model Measurement {
+  id          String   @id @default(cuid())
+  userId      String
+  gymId       String?
+  createdById String?
+  weight      Float
+  bodyFat     Float?
+  measurements Json
+  measuredAt  DateTime
+  createdAt   DateTime @default(now())
+
+  user      User  @relation("MeasurementOwner", fields: [userId], references: [id])
+  gym       Gym?  @relation(fields: [gymId], references: [id])
+  createdBy User? @relation("MeasurementCreator", fields: [createdById], references: [id])
+}
+
+model Notification {
+  id       String   @id @default(cuid())
+  userId   String
+  gymId    String?
+  senderId String?
+  title    String
+  body     String
+  isRead   Boolean  @default(false)
+  sentAt   DateTime @default(now())
+
+  user   User  @relation("NotificationReceiver", fields: [userId], references: [id])
+  gym    Gym?  @relation(fields: [gymId], references: [id])
+  sender User? @relation("NotificationSender", fields: [senderId], references: [id])
+}
