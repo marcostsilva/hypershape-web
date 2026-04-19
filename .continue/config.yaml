@@ -1,0 +1,33 @@
+rules:
+  - filePattern: "**/prisma/**"
+    rule: .continue/skills/prisma-expert/SKILL.md
+
+  - filePattern: "**/prisma/**"
+    rule: .continue/skills/neon-postgres/SKILL.md
+
+  - filePattern: "**/api/**"
+    rule: .continue/skills/api-design-principles/SKILL.md
+
+  - filePattern: "**/api/**"
+    rule: .continue/skills/api-security-best-practices/SKILL.md
+
+  - filePattern: "**/auth**"
+    rule: .continue/skills/auth-implementation-patterns/SKILL.md
+
+  - filePattern: "**/components/**"
+    rule: .continue/skills/react-best-practices/SKILL.md
+
+  - filePattern: "**/components/**"
+    rule: .continue/skills/tailwind-patterns/SKILL.md
+
+  - filePattern: "**/*.ts"
+    rule: .continue/skills/typescript-expert/SKILL.md
+
+  - filePattern: "**/*.tsx"
+    rule: .continue/skills/typescript-expert/SKILL.md
+
+  - filePattern: "**/middleware**"
+    rule: .continue/skills/security/SKILL.md
+
+  - filePattern: "**/middleware**"
+    rule: .continue/skills/backend-security-coder/SKILL.md

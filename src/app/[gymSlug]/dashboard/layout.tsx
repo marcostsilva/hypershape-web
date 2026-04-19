@@ -2,11 +2,15 @@ import { Sidebar } from "@/components/dashboard/sidebar"
 import { Providers } from "@/components/providers"
 import { Flame, Menu } from "lucide-react"
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
+  params,
 }: {
   children: React.ReactNode
+  params: Promise<{ gymSlug: string }>
 }) {
+  const { gymSlug } = await params
+
   return (
     <Providers>
       <div className="relative min-h-screen bg-background overflow-hidden">
@@ -34,7 +38,7 @@ export default function DashboardLayout({
         </div>
 
         <div className="flex h-screen md:h-auto md:min-h-screen relative z-10">
-          <Sidebar />
+          <Sidebar gymSlug={gymSlug} />
           
           {/* Main Content Area */}
           <main className="flex-1 md:pl-64 flex flex-col h-full overflow-y-auto">

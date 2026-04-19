@@ -2,20 +2,24 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { usePathname } from "next/navigation"
+import { usePathname, useParams } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Flame, LayoutDashboard, Dumbbell, Ruler, LogOut } from "lucide-react"
 import { signOut } from "next-auth/react"
 
-const navItems = [
-  { name: "Visão Geral", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Meus Treinos", href: "/dashboard/workouts", icon: Dumbbell },
-  { name: "Medidas Corporais", href: "/dashboard/measurements", icon: Ruler },
+const getNavItems = (gymSlug: string) => [
+  { name: "Visão Geral", href: `/${gymSlug}/dashboard`, icon: LayoutDashboard },
+  { name: "Meus Treinos", href: `/${gymSlug}/dashboard/workouts`, icon: Dumbbell },
+  { name: "Medidas Corporais", href: `/${gymSlug}/dashboard/measurements`, icon: Ruler },
 ]
 
-export function Sidebar() {
+export function Sidebar({ gymSlug: propGymSlug }: { gymSlug?: string }) {
   const pathname = usePathname()
+  const params = useParams()
   const { data: session } = useSession()
+  
+  const gymSlug = propGymSlug || (params?.gymSlug as string) || "me"
+  const navItems = getNavItems(gymSlug)
 
   const userName = session?.user?.name || "Atleta"
   const userEmail = session?.user?.email || ""
@@ -24,7 +28,7 @@ export function Sidebar() {
   return (
     <aside className="w-64 border-r border-white/5 bg-black/40 backdrop-blur-xl hidden md:flex flex-col h-full absolute inset-y-0 left-0 z-20">
       <div className="flex h-16 shrink-0 items-center px-6 border-b border-white/5">
-        <Link href="/dashboard" className="flex items-center gap-2 group">
+        <Link href={`/${gymSlug}/dashboard`} className="flex items-center gap-2 group">
           <Flame className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
           <span className="font-heading font-bold text-xl tracking-tight text-white">
             Hyper<span className="text-primary">Shape</span>

@@ -10,6 +10,13 @@ export async function createMeasurementAction(formData: FormData) {
     const session = await auth()
     if (!session?.user) return { error: "Não autorizado" }
 
+    const gymSlug = formData.get("gymSlug") as string
+    let gymId: string | null = null
+    if (gymSlug && gymSlug !== "me") {
+      const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
+      if (gym) gymId = gym.id
+    }
+
     const rawData = {
       weight: formData.get("weight"),
       bodyFat: formData.get("bodyFat") || undefined,
@@ -46,7 +53,7 @@ export async function createMeasurementAction(formData: FormData) {
     await prisma.measurement.create({
       data: {
         userId: session.user.id!,
-        gymId: session.user.gymId || null,
+        gymId: gymId,
         weight,
         bodyFat: bodyFat || null,
         measuredAt,
@@ -54,8 +61,9 @@ export async function createMeasurementAction(formData: FormData) {
       }
     })
 
-    revalidatePath("/dashboard")
-    revalidatePath("/dashboard/measurements")
+    const basePath = `/${gymSlug}/dashboard`
+    revalidatePath(basePath)
+    revalidatePath(`${basePath}/measurements`)
     
     return { data: "Medidas registradas com sucesso!" }
   } catch (error) {
@@ -64,7 +72,7 @@ export async function createMeasurementAction(formData: FormData) {
   }
 }
 
-export async function deleteMeasurementAction(measurementId: string) {
+export async function deleteMeasurementAction(measurementId: string, gymSlug: string = "me") {
   try {
     const session = await auth()
     if (!session?.user) return { error: "Não autorizado" }
@@ -81,8 +89,9 @@ export async function deleteMeasurementAction(measurementId: string) {
       where: { id: measurementId }
     })
 
-    revalidatePath("/dashboard")
-    revalidatePath("/dashboard/measurements")
+    const basePath = `/${gymSlug}/dashboard`
+    revalidatePath(basePath)
+    revalidatePath(`${basePath}/measurements`)
     
     return { data: "Registro removido." }
   } catch (error) {

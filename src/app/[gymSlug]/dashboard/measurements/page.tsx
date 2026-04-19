@@ -53,12 +53,23 @@ const fieldLabels: Record<string, string> = {
   calfLeft: "Pantur. E",
 }
 
-export default async function MeasurementsPage() {
+export default async function MeasurementsPage({ params }: { params: Promise<{ gymSlug: string }> }) {
+  const { gymSlug } = await params
   const session = await auth()
   if (!session?.user) redirect("/login")
 
+  let gymId: string | null = null
+  if (gymSlug !== "me") {
+    const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
+    if (!gym) redirect("/me/dashboard")
+    gymId = gym.id
+  }
+
   const history = await prisma.measurement.findMany({
-    where: { userId: session.user.id },
+    where: { 
+      userId: session.user.id,
+      gymId: gymId
+    },
     orderBy: { measuredAt: "desc" }
   })
 
@@ -85,6 +96,7 @@ export default async function MeasurementsPage() {
             </h2>
 
             <form action={createMeasurementAction} className="space-y-5 relative z-10">
+              <input type="hidden" name="gymSlug" value={gymSlug} />
               {/* Peso + Altura + BF */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5">
@@ -207,6 +219,15 @@ export default async function MeasurementsPage() {
                 {history.map((record) => {
                   const details = record.measurements as Record<string, number> | null || {}
                   const entries = details ? Object.entries(details).filter(([, v]) => v) : []
+                  const height = details?.height ?? null
+                  const imc = height && height > 0 ? record.weight / (height * height) : null
+                  const imcCategory = imc
+                    ? imc < 18.5 ? { label: "Abaixo", color: "text-blue-400 bg-blue-400/10 border-blue-400/20" }
+                    : imc < 25 ? { label: "Normal", color: "text-emerald-400 bg-emerald-400/10 border-emerald-400/20" }
+                    : imc < 30 ? { label: "Sobrepeso", color: "text-yellow-400 bg-yellow-400/10 border-yellow-400/20" }
+                    : { label: "Obesidade", color: "text-red-400 bg-red-400/10 border-red-400/20" }
+                    : null
+
                   return (
                     <div key={record.id} className="bg-black/20 border border-white/5 hover:border-primary/30 transition-colors rounded-xl p-5 relative group">
                       <div className="flex justify-between items-start mb-3">
@@ -220,6 +241,11 @@ export default async function MeasurementsPage() {
                         </div>
                         
                         <div className="flex items-center gap-2">
+                          {imc && imcCategory && (
+                            <div className={`px-2 py-1 rounded text-xs font-bold border ${imcCategory.color}`}>
+                              IMC {imc.toFixed(1)} · {imcCategory.label}
+                            </div>
+                          )}
                           {record.bodyFat && (
                             <div className="bg-primary/10 text-primary px-2 py-1 rounded text-xs font-bold border border-primary/20">
                               {record.bodyFat}% BF
@@ -228,7 +254,7 @@ export default async function MeasurementsPage() {
                           
                           <form action={async () => {
                             "use server"
-                            await deleteMeasurementAction(record.id)
+                            await deleteMeasurementAction(record.id, gymSlug)
                           }}>
                             <button type="submit" className="text-zinc-600 hover:text-destructive transition-colors" title="Remover Registro">
                               <Trash2 className="w-4 h-4" />
@@ -236,14 +262,21 @@ export default async function MeasurementsPage() {
                           </form>
                         </div>
                       </div>
+
+                      {height && (
+                        <div className="text-[10px] uppercase text-zinc-500 mb-2">
+                          Altura<br/>
+                          <span className="text-zinc-300 font-bold text-xs">{height} m</span>
+                        </div>
+                      )}
                       
-                      {entries.length > 0 && (
+                      {entries.filter(([key]) => key !== "height").length > 0 && (
                         <div className="grid grid-cols-3 gap-x-3 gap-y-2 mt-3 pt-3 border-t border-white/5">
-                          {entries.map(([key, value]) => (
+                          {entries.filter(([key]) => key !== "height").map(([key, value]) => (
                             <div key={key} className="text-[10px] uppercase text-zinc-500 leading-tight">
                               {fieldLabels[key] || key}<br/>
                               <span className="text-zinc-300 font-bold text-xs">
-                                {value}{key === "height" ? " m" : " cm"}
+                                {value} cm
                               </span>
                             </div>
                           ))}

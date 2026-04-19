@@ -68,6 +68,13 @@ export default function LoginPage() {
             <div className="w-full">
               <LoginForm />
             </div>
+
+            <div className="mt-4 text-center text-sm text-zinc-500">
+              Não tem uma conta?{" "}
+              <a href="/register" className="text-primary hover:underline font-medium">
+                Criar Conta
+              </a>
+            </div>
             
             {/* Footer */}
             <p className="text-center text-xs text-muted-foreground/60 max-w-[250px]">

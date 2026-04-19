@@ -1,25 +1,34 @@
 import * as z from "zod"
 
-// Esquema simplificado de exercício inserido no treino
+// Esquema de exercício com configuração de séries/repetições/carga
 const ExerciseSchema = z.object({
+  id: z.string().min(1, "ID do exercício é obrigatório"),
   name: z.string().min(1, "O nome do exercício é obrigatório"),
-  sets: z.number().min(1).optional(),
-  reps: z.string().optional(), // Pode ser "10-12" ou "falha"
-  weight: z.number().optional(), // Carga em kg
+  category: z.string().min(1, "Categoria é obrigatória"),
+  sets: z.number().min(1, "Mínimo 1 série").default(3),
+  reps: z.string().default("12"),   // Pode ser "10-12", "falha", "30s", etc.
+  weight: z.number().optional(),    // Carga em kg
+  imageUrl: z.string().optional(),
   notes: z.string().optional()
 })
 
-// Schema de Criação de Treino (Workout)
+export type ExerciseInput = z.infer<typeof ExerciseSchema>
+
+// Schema de Criação de Treino — apenas nome e data
 export const CreateWorkoutSchema = z.object({
   name: z.string().min(2, "O nome do treino deve ter pelo menos 2 caracteres"),
-  durationMinutes: z.coerce.number().min(1, "Duração deve ser pelo menos 1 minuto"),
-  caloriesBurned: z.coerce.number().optional(),
   performedAt: z.string().transform((str) => new Date(str)),
-  // Opcional para o form MVP, ou injetado depois
-  exercises: z.array(ExerciseSchema).default([]) 
 })
 
 export type CreateWorkoutInput = z.infer<typeof CreateWorkoutSchema>
+
+// Schema para atualizar exercícios de um treino
+export const UpdateWorkoutExercisesSchema = z.object({
+  workoutId: z.string().min(1),
+  exercises: z.array(ExerciseSchema),
+})
+
+export type UpdateWorkoutExercisesInput = z.infer<typeof UpdateWorkoutExercisesSchema>
 
 // Schema das medidas detalhadas do corpo (Json field no DB)
 // Compatível com o app mobile: inclui lateralidade Dir/Esq

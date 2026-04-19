@@ -39,11 +39,19 @@ function getMonthLabel(date: Date): string {
 // Page
 // ============================================================
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ params }: { params: Promise<{ gymSlug: string }> }) {
+  const { gymSlug } = await params
   const session = await auth()
   if (!session?.user) redirect("/login")
 
   const userId = session.user.id
+
+  let gymId: string | null = null
+  if (gymSlug !== "me") {
+    const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
+    if (!gym) redirect("/me/dashboard")
+    gymId = gym.id
+  }
 
   // ---------- Aggregations ----------
   const now = new Date()
@@ -58,22 +66,22 @@ export default async function DashboardPage() {
     caloriesAgg,
     recentMeasurements,
   ] = await Promise.all([
-    prisma.workout.count({ where: { userId } }),
+    prisma.workout.count({ where: { userId, gymId } }),
     prisma.workout.findMany({
-      where: { userId, performedAt: { gte: startOfMonth } },
+      where: { userId, gymId, performedAt: { gte: startOfMonth } },
       select: { durationMinutes: true, caloriesBurned: true },
     }),
     prisma.workout.findMany({
-      where: { userId },
+      where: { userId, gymId },
       orderBy: { performedAt: "asc" },
       select: { performedAt: true, durationMinutes: true, caloriesBurned: true },
     }),
     prisma.workout.aggregate({
       _sum: { caloriesBurned: true },
-      where: { userId },
+      where: { userId, gymId },
     }),
     prisma.measurement.findMany({
-      where: { userId },
+      where: { userId, gymId },
       orderBy: { measuredAt: "asc" },
       select: { weight: true, bodyFat: true, measuredAt: true, measurements: true },
     }),
