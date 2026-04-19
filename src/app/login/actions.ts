@@ -14,7 +14,7 @@ export async function loginWithCredentialsAction(
     if (error instanceof AuthError) {
       switch (error.type) {
         case "CredentialsSignin":
-          return { error: "Credenciais inválidas. Tente novamente." }
+          return { error: "Usuário ou senha inválida." }
         default:
           return { error: "Ocorreu um erro inesperado." }
       }

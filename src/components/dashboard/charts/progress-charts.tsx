@@ -97,15 +97,15 @@ export function WeightChart({ data }: WeightChartProps) {
       <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -15, bottom: 0 }}>
         <defs>
           <linearGradient id="weightGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#39FF14" stopOpacity={0.3} />
-            <stop offset="100%" stopColor="#39FF14" stopOpacity={0} />
+            <stop offset="0%" stopColor="#f97316" stopOpacity={0.4} />
+            <stop offset="100%" stopColor="#f97316" stopOpacity={0} />
           </linearGradient>
           <linearGradient id="bfGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#FF6B6B" stopOpacity={0.2} />
-            <stop offset="100%" stopColor="#FF6B6B" stopOpacity={0} />
+            <stop offset="0%" stopColor="#ef4444" stopOpacity={0.2} />
+            <stop offset="100%" stopColor="#ef4444" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
         <XAxis
           dataKey="date"
           tick={{ fill: "rgba(255,255,255,0.4)", fontSize: 10 }}
@@ -139,11 +139,11 @@ export function WeightChart({ data }: WeightChartProps) {
           yAxisId="weight"
           type="monotone"
           dataKey="peso"
-          stroke="#39FF14"
-          strokeWidth={2.5}
+          stroke="#f97316"
+          strokeWidth={3}
           fill="url(#weightGradient)"
-          dot={{ fill: "#39FF14", strokeWidth: 0, r: 3 }}
-          activeDot={{ r: 5, fill: "#39FF14", stroke: "#000", strokeWidth: 2 }}
+          dot={{ fill: "#f97316", strokeWidth: 2, stroke: "#18181b", r: 4 }}
+          activeDot={{ r: 6, fill: "#f97316", stroke: "#fff", strokeWidth: 2 }}
           name="Peso (kg)"
         />
         {hasBF && (
@@ -270,7 +270,7 @@ export function ProgressCharts({ data }: { data: MeasurementRecord[] }) {
       {/* Peso + BF */}
       <div className="bg-black/30 border border-white/5 rounded-2xl p-5 backdrop-blur-md">
         <h3 className="text-sm font-heading font-bold text-white mb-4 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-[#39FF14]" />
+          <span className="w-2 h-2 rounded-full bg-primary" />
           Peso & Composição Corporal
         </h3>
         <WeightChart data={data} />

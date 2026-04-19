@@ -7,11 +7,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 
+import { useSearchParams } from "next/navigation"
+
 export function LoginForm() {
   const [state, formAction, isPending] = useActionState(loginWithCredentialsAction, null)
+  const searchParams = useSearchParams()
+  const success = searchParams.get("success")
 
   return (
     <div className="grid gap-6 w-full">
+      {success === "password_reset" && (
+        <div className="text-sm text-emerald-400 text-center font-medium bg-emerald-400/10 border border-emerald-400/20 p-3 rounded-lg animate-in fade-in slide-in-from-top-2">
+          Senha alterada com sucesso! Faça login agora.
+        </div>
+      )}
+      {success === "registered" && (
+        <div className="text-sm text-emerald-400 text-center font-medium bg-emerald-400/10 border border-emerald-400/20 p-3 rounded-lg animate-in fade-in slide-in-from-top-2">
+          Conta criada com sucesso! Faça login para começar.
+        </div>
+      )}
       <form action={formAction}>
         <div className="grid gap-5">
           <div className="grid gap-2 relative">
@@ -48,8 +62,32 @@ export function LoginForm() {
           </div>
 
           {state?.error && (
-            <div className="text-sm text-destructive text-center font-medium bg-destructive/10 border border-destructive/20 p-3 rounded-lg animate-in slide-in-from-top-2">
-              {state.error}
+            <div className="space-y-3 animate-in slide-in-from-top-2">
+              <div className="text-sm text-destructive text-center font-medium bg-destructive/10 border border-destructive/20 p-3 rounded-lg">
+                {state.error}
+              </div>
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const emailInput = document.getElementById("email") as HTMLInputElement
+                    if (emailInput.value) {
+                      const formData = new FormData()
+                      formData.append("email", emailInput.value)
+                      import("@/app/forgot-password/actions").then(m => {
+                        m.requestPasswordResetAction(formData).then(res => {
+                          alert(res.success || res.error)
+                        })
+                      })
+                    } else {
+                      alert("Por favor, preencha seu e-mail para solicitar o reset de senha.")
+                    }
+                  }}
+                  className="text-xs text-primary hover:underline font-medium uppercase tracking-wider"
+                >
+                  Esqueceu a senha? Resetar agora
+                </button>
+              </div>
             </div>
           )}
 

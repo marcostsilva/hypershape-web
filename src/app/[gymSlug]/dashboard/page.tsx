@@ -1,12 +1,13 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
+import Link from "next/link"
 import prisma from "@/lib/prisma"
 import Image from "next/image"
 import { Dumbbell, Flame, Scale, Activity, Timer, Weight } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Sparkline } from "@/components/dashboard/charts/sparkline"
 import { ActivityHeatmap } from "@/components/dashboard/charts/activity-heatmap"
-import { WeeklyHoursChart, MonthlyHoursChart, CaloriesWeekChart } from "@/components/dashboard/charts/workout-charts"
+import { WeeklyHoursChart, MonthlyHoursChart, CaloriesWeekChart, MonthlyVolumeChart } from "@/components/dashboard/charts/workout-charts"
 import { WeightChart } from "@/components/dashboard/charts/progress-charts"
 
 // ============================================================
@@ -35,6 +36,32 @@ function getMonthLabel(date: Date): string {
   return date.toLocaleDateString("pt-BR", { month: "short" })
 }
 
+interface ExerciseJson {
+  sets?: number;
+  reps?: string;
+  weight?: number;
+}
+
+function calculateWorkoutVolume(exercisesJson: any): number {
+  if (!exercisesJson) return 0;
+  try {
+    let exercises = exercisesJson;
+    if (typeof exercises === 'string') exercises = JSON.parse(exercises);
+    if (!Array.isArray(exercises)) return 0;
+    
+    return exercises.reduce((acc: number, ex: ExerciseJson) => {
+      const sets = ex.sets || 0;
+      const repsStr = ex.reps || "1";
+      const repsMatch = repsStr.match(/\d+/);
+      const reps = repsMatch ? parseInt(repsMatch[0], 10) : 1;
+      const weight = ex.weight || 0;
+      return acc + (sets * Math.max(1, reps) * weight);
+    }, 0);
+  } catch {
+    return 0;
+  }
+}
+
 // ============================================================
 // Page
 // ============================================================
@@ -47,10 +74,22 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
   const userId = session.user.id
 
   let gymId: string | null = null
+  let resolvedGymSlug = gymSlug
+
   if (gymSlug !== "me") {
     const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
     if (!gym) redirect("/me/dashboard")
     gymId = gym.id
+  } else if (session.user.gymId) {
+    // Se estiver em /me mas tiver uma academia vinculada, busca o slug dela
+    const gym = await prisma.gym.findUnique({ 
+      where: { id: session.user.gymId },
+      select: { slug: true, id: true }
+    })
+    if (gym) {
+      resolvedGymSlug = gym.slug
+      gymId = gym.id
+    }
   }
 
   // ---------- Aggregations ----------
@@ -66,19 +105,19 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
     caloriesAgg,
     recentMeasurements,
   ] = await Promise.all([
-    prisma.workout.count({ where: { userId, gymId } }),
+    prisma.workout.count({ where: { userId, gymId, isTemplate: false } }),
     prisma.workout.findMany({
-      where: { userId, gymId, performedAt: { gte: startOfMonth } },
-      select: { durationMinutes: true, caloriesBurned: true },
+      where: { userId, gymId, isTemplate: false, performedAt: { gte: startOfMonth } },
+      select: { durationMinutes: true, caloriesBurned: true, exercises: true },
     }),
     prisma.workout.findMany({
-      where: { userId, gymId },
+      where: { userId, gymId, isTemplate: false },
       orderBy: { performedAt: "asc" },
-      select: { performedAt: true, durationMinutes: true, caloriesBurned: true },
+      select: { performedAt: true, durationMinutes: true, caloriesBurned: true, exercises: true },
     }),
     prisma.workout.aggregate({
       _sum: { caloriesBurned: true },
-      where: { userId, gymId },
+      where: { userId, gymId, isTemplate: false },
     }),
     prisma.measurement.findMany({
       where: { userId, gymId },
@@ -88,13 +127,13 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
   ])
 
   // ---------- Derived stats ----------
-  const totalCalories = caloriesAgg._sum.caloriesBurned || 0
+  const totalCalories = caloriesAgg._sum?.caloriesBurned ?? 0
 
   // Monthly stats
   const monthlyTrainingCount = monthlyWorkouts.length
-  const monthlyMinutes = monthlyWorkouts.reduce((acc, w) => acc + w.durationMinutes, 0)
-  const monthlyCalories = monthlyWorkouts.reduce((acc, w) => acc + (w.caloriesBurned || 0), 0)
-  const monthlyVolume = 0 // Would need exercise data for volume
+  const monthlyMinutes = monthlyWorkouts.reduce((acc, w) => acc + (w.durationMinutes ?? 0), 0)
+  const monthlyCalories = monthlyWorkouts.reduce((acc, w) => acc + (w.caloriesBurned ?? 0), 0)
+  const monthlyVolume = monthlyWorkouts.reduce((acc, w) => acc + calculateWorkoutVolume(w.exercises), 0)
 
   // Last measurement
   const lastMeasurement = recentMeasurements.length > 0
@@ -127,7 +166,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
   const weeklyMap = new Map<string, number>()
   allWorkouts.forEach((w) => {
     const label = getWeekLabel(w.performedAt)
-    weeklyMap.set(label, (weeklyMap.get(label) || 0) + w.durationMinutes / 60)
+    weeklyMap.set(label, (weeklyMap.get(label) || 0) + (w.durationMinutes ?? 0) / 60)
   })
   const weeklyHoursData = Array.from(weeklyMap.entries())
     .slice(-8)
@@ -135,13 +174,18 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
 
   // Monthly hours (last 6 months)
   const monthlyMap = new Map<string, number>()
+  const monthlyVolumeMap = new Map<string, number>()
   allWorkouts.forEach((w) => {
     const label = getMonthLabel(w.performedAt)
-    monthlyMap.set(label, (monthlyMap.get(label) || 0) + w.durationMinutes / 60)
+    monthlyMap.set(label, (monthlyMap.get(label) || 0) + (w.durationMinutes ?? 0) / 60)
+    monthlyVolumeMap.set(label, (monthlyVolumeMap.get(label) || 0) + calculateWorkoutVolume(w.exercises))
   })
   const monthlyHoursData = Array.from(monthlyMap.entries())
     .slice(-6)
     .map(([month, hours]) => ({ month, hours: parseFloat(hours.toFixed(1)) }))
+  const monthlyVolumeData = Array.from(monthlyVolumeMap.entries())
+    .slice(-6)
+    .map(([month, volume]) => ({ month, volume }))
 
   // Calories last 7 days
   const last7DaysWorkouts = allWorkouts.filter((w) => w.performedAt >= sevenDaysAgo)
@@ -189,13 +233,27 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
             <span className="text-[10px]">📷</span>
           </div>
         </div>
-        <div>
-          <h1 className="text-3xl font-heading font-bold text-white tracking-tight">
-            {session.user.name || "Atleta"}
-          </h1>
-          <p className="text-zinc-500 text-sm">
-            @{session.user.email?.split("@")[0] || "usuario"}
-          </p>
+        <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-heading font-bold text-white tracking-tight">
+              {session.user.name || "Atleta"}
+            </h1>
+            <p className="text-zinc-500 text-sm">
+              @{session.user.email?.split("@")[0] || "usuario"}
+            </p>
+          </div>
+          
+          {(session.user.role === "ADMIN" || session.user.role === "COACH") && (
+            <Link 
+              href={resolvedGymSlug === "me" ? "/admin" : `/${resolvedGymSlug}/admin`}
+              className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2 transition-all group"
+            >
+              <div className="p-1 bg-primary/20 rounded group-hover:bg-primary/30 transition-colors">
+                <Flame className="w-4 h-4 text-primary" />
+              </div>
+              Painel Administrativo
+            </Link>
+          )}
         </div>
       </div>
 
@@ -298,6 +356,15 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
           <MonthlyHoursChart data={monthlyHoursData} />
         </div>
 
+        {/* Volume Mensal */}
+        <div className="bg-black/30 border border-white/5 rounded-xl p-5 backdrop-blur-md">
+          <h3 className="text-sm font-heading font-bold text-white mb-4 flex items-center gap-2">
+            <Weight className="w-4 h-4 text-purple-500" />
+            Volume Mensal (kg)
+          </h3>
+          <MonthlyVolumeChart data={monthlyVolumeData} />
+        </div>
+
         {/* Calorias Perdidas (7 Dias) */}
         <div className="bg-black/30 border border-white/5 rounded-xl p-5 backdrop-blur-md md:col-span-2">
           <h3 className="text-sm font-heading font-bold text-white mb-4 flex items-center gap-2">
@@ -344,7 +411,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
             <p className="text-xs text-zinc-500 mt-1">
               {lastMeasurement ? new Date(lastMeasurement.measuredAt).toLocaleDateString("pt-BR") : "Nenhum registro"}
             </p>
-            <Sparkline data={weightData} color="#39FF14" unit="kg" />
+            <Sparkline data={weightData} color="#f97316" unit="kg" />
           </CardContent>
         </Card>
 
@@ -360,7 +427,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
             <p className="text-xs text-zinc-500 mt-1">
               {lastMeasurement?.bodyFat ? "Bom progresso" : "Atualize suas medidas"}
             </p>
-            <Sparkline data={bfData} color="#FF6B6B" unit="%" />
+            <Sparkline data={bfData} color="#ef4444" unit="%" />
           </CardContent>
         </Card>
       </div>

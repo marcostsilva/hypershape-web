@@ -1,5 +1,7 @@
 import { LoginForm } from "@/components/auth/login-form"
 import { Metadata } from "next"
+import { Suspense } from "react"
+import { Loader2 } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Login | HyperShape",
@@ -66,7 +68,9 @@ export default function LoginPage() {
             
             {/* Auth Form Component */}
             <div className="w-full">
-              <LoginForm />
+              <Suspense fallback={<div className="h-40 flex items-center justify-center"><Loader2 className="animate-spin text-primary" /></div>}>
+                <LoginForm />
+              </Suspense>
             </div>
 
             <div className="mt-4 text-center text-sm text-zinc-500">

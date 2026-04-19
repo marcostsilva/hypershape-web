@@ -4,14 +4,13 @@ import prisma from "@/lib/prisma"
 import bcrypt from "bcryptjs"
 import { redirect } from "next/navigation"
 
-export async function registerAction(formData: FormData) {
+export async function registerAction(prevState: any, formData: FormData) {
   const name = formData.get("name") as string
   const email = formData.get("email") as string
   const password = formData.get("password") as string
 
   if (!name || !email || !password || password.length < 6) {
-    // Em um app real, lidar com erros (redirecionar com flash message ou useFormState)
-    return redirect("/register?error=invalid_data")
+    return { error: "Dados inválidos. A senha deve ter pelo menos 6 caracteres." }
   }
 
   // Verifica se o usuário já existe
@@ -20,20 +19,24 @@ export async function registerAction(formData: FormData) {
   })
 
   if (existingUser) {
-    return redirect("/register?error=email_exists")
+    return { error: "E-mail já cadastrado." }
   }
 
   // Criptografa a senha
   const hashedPassword = await bcrypt.hash(password, 10)
 
-  // Cria o usuário
-  await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-    }
-  })
+  try {
+    // Cria o usuário
+    await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+      }
+    })
+  } catch (error) {
+    return { error: "Erro ao criar conta. Tente novamente mais tarde." }
+  }
 
   // Redireciona para o login com mensagem de sucesso
   redirect("/login?success=registered")

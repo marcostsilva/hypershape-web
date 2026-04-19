@@ -15,15 +15,18 @@ export const authConfig = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.id = user.id
-        token.image = user.image
+        token.role = (user as any).role
+        token.gymId = (user as any).gymId
+        token.isBlocked = (user as any).isBlocked
       }
       return token
     },
     async session({ session, token }) {
-      if (session.user && token.id) {
-        session.user.id = token.id as string
-        session.user.image = (token.image as string) || null
+      if (session.user && token) {
+        ;(session.user as any).id = token.sub
+        ;(session.user as any).role = token.role
+        ;(session.user as any).gymId = token.gymId
+        ;(session.user as any).isBlocked = token.isBlocked
       }
       return session
     },

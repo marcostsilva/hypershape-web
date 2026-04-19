@@ -6,9 +6,9 @@ import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { CreateWorkoutSchema, UpdateWorkoutExercisesSchema } from "@/lib/validations/features"
 
-export async function createWorkoutAction(formData: FormData) {
+export async function createWorkoutAction(formData: FormData): Promise<void> {
   const session = await auth()
-  if (!session?.user) return { error: "Não autorizado" }
+  if (!session?.user) redirect("/login")
 
   const gymSlug = formData.get("gymSlug") as string
   let gymId: string | null = null
@@ -25,7 +25,7 @@ export async function createWorkoutAction(formData: FormData) {
   const validatedData = CreateWorkoutSchema.safeParse(rawData)
   
   if (!validatedData.success) {
-    return { error: validatedData.error.errors[0].message }
+    redirect(`/${gymSlug}/dashboard/workouts?error=${encodeURIComponent(validatedData.error.issues[0]?.message ?? "Dados inválidos")}`)
   }
 
   const { name, performedAt } = validatedData.data
@@ -39,6 +39,7 @@ export async function createWorkoutAction(formData: FormData) {
       caloriesBurned: null,
       performedAt,
       exercises: [],
+      isTemplate: true,
     }
   })
 
@@ -69,19 +70,24 @@ export async function updateWorkoutExercisesAction(rawData: {
 
   const { workoutId, gymSlug, exercises } = rawData
 
-  // Verifica se o treino pertence ao usuário
+  // Verifica se o treino pertence ao usuário ou se o usuário foi quem criou o treino (Coach)
   const workout = await prisma.workout.findUnique({
     where: { id: workoutId }
   })
 
-  if (!workout || workout.userId !== session.user.id) {
-    return { error: "Treino não encontrado ou sem permissão." }
+  if (!workout) {
+    return { error: "Treino não encontrado." }
+  }
+
+  if (workout.userId !== session.user.id && workout.createdById !== session.user.id) {
+    return { error: "Sem permissão para alterar este treino." }
   }
 
   await prisma.workout.update({
     where: { id: workoutId },
     data: {
-      exercises: exercises as unknown as Record<string, unknown>[],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      exercises: exercises as any,
     }
   })
 

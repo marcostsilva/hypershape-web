@@ -36,9 +36,44 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         return {
           id: user.id,
           email: user.email,
-          name: user.name
+          name: user.name,
+          role: user.role,
+          gymId: user.gymId,
+          isBlocked: user.isBlocked,
         }
       }
     })
-  ]
+  ],
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      // Se tivermos user, é o momento do sign in
+      if (user) {
+        token.role = (user as any).role
+        token.gymId = (user as any).gymId
+        token.isBlocked = (user as any).isBlocked
+      }
+
+      // Sempre tentar buscar o slug se tivermos gymId mas não tivermos slug no token ainda
+      if (token.gymId && !token.gymSlug) {
+        const gym = await prisma.gym.findUnique({
+          where: { id: token.gymId as string },
+          select: { slug: true }
+        })
+        token.gymSlug = gym?.slug
+      }
+      
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user && token) {
+        session.user.id = token.sub as string
+        ;(session.user as any).role = token.role
+        ;(session.user as any).gymId = token.gymId
+        ;(session.user as any).gymSlug = token.gymSlug
+        ;(session.user as any).isBlocked = token.isBlocked
+      }
+      return session
+    }
+  }
 })

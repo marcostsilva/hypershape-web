@@ -40,7 +40,7 @@ export async function createMeasurementAction(formData: FormData) {
     const validatedData = CreateMeasurementSchema.safeParse(rawData)
     
     if (!validatedData.success) {
-      return { error: validatedData.error.errors[0].message }
+      return { error: validatedData.error.issues[0]?.message ?? "Dados inválidos" }
     }
 
     const { weight, bodyFat, measuredAt, measurements } = validatedData.data

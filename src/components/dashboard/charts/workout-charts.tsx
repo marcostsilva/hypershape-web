@@ -54,20 +54,26 @@ export function WeeklyHoursChart({ data }: WeeklyHoursProps) {
   return (
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <defs>
+          <linearGradient id="primaryGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f97316" stopOpacity={1} />
+            <stop offset="100%" stopColor="#ea580c" stopOpacity={0.8} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
         <XAxis dataKey="week" tick={axisTickStyle} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} tickLine={false} />
         <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} />
         <Tooltip
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
           formatter={(value: number) => [`${value.toFixed(1)}h`, "Horas"]}
+          cursor={{ fill: "rgba(255,255,255,0.05)" }}
         />
         <Bar
           dataKey="hours"
-          fill="#39FF14"
-          radius={[4, 4, 0, 0]}
+          fill="url(#primaryGrad)"
+          radius={[6, 6, 0, 0]}
           maxBarSize={40}
-          fillOpacity={0.8}
         />
       </BarChart>
     </ResponsiveContainer>
@@ -94,20 +100,26 @@ export function MonthlyHoursChart({ data }: MonthlyHoursProps) {
   return (
     <ResponsiveContainer width="100%" height={200}>
       <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <defs>
+          <linearGradient id="blueGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#3b82f6" stopOpacity={1} />
+            <stop offset="100%" stopColor="#2563eb" stopOpacity={0.8} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
         <XAxis dataKey="month" tick={axisTickStyle} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} tickLine={false} />
         <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} />
         <Tooltip
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
           formatter={(value: number) => [`${value.toFixed(1)}h`, "Horas"]}
+          cursor={{ fill: "rgba(255,255,255,0.05)" }}
         />
         <Bar
           dataKey="hours"
-          fill="#60A5FA"
-          radius={[4, 4, 0, 0]}
+          fill="url(#blueGrad)"
+          radius={[6, 6, 0, 0]}
           maxBarSize={50}
-          fillOpacity={0.8}
         />
       </BarChart>
     </ResponsiveContainer>
@@ -136,11 +148,11 @@ export function CaloriesWeekChart({ data }: CaloriesWeekProps) {
       <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="caloriesGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.4} />
-            <stop offset="100%" stopColor="#F59E0B" stopOpacity={0} />
+            <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.5} />
+            <stop offset="100%" stopColor="#f59e0b" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
         <XAxis dataKey="day" tick={axisTickStyle} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} tickLine={false} />
         <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} />
         <Tooltip
@@ -151,13 +163,59 @@ export function CaloriesWeekChart({ data }: CaloriesWeekProps) {
         <Area
           type="monotone"
           dataKey="calories"
-          stroke="#F59E0B"
-          strokeWidth={2}
+          stroke="#f59e0b"
+          strokeWidth={3}
           fill="url(#caloriesGrad)"
-          dot={{ fill: "#F59E0B", strokeWidth: 0, r: 3 }}
-          activeDot={{ r: 5, fill: "#F59E0B", stroke: "#000", strokeWidth: 2 }}
+          dot={{ fill: "#f59e0b", strokeWidth: 2, stroke: "#18181b", r: 4 }}
+          activeDot={{ r: 6, fill: "#f59e0b", stroke: "#fff", strokeWidth: 2 }}
         />
       </AreaChart>
+    </ResponsiveContainer>
+  )
+}
+
+// ============================================================
+// Volume de Treino por Mês (kg)
+// ============================================================
+
+interface MonthlyVolumeProps {
+  data: { month: string; volume: number }[]
+}
+
+export function MonthlyVolumeChart({ data }: MonthlyVolumeProps) {
+  if (data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-40 text-zinc-600 text-xs">
+        Nenhum volume registrado ainda.
+      </div>
+    )
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+        <defs>
+          <linearGradient id="purpleGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a855f7" stopOpacity={1} />
+            <stop offset="100%" stopColor="#7e22ce" stopOpacity={0.8} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+        <XAxis dataKey="month" tick={axisTickStyle} axisLine={{ stroke: "rgba(255,255,255,0.1)" }} tickLine={false} />
+        <YAxis tick={axisTickStyle} axisLine={false} tickLine={false} />
+        <Tooltip
+          contentStyle={tooltipStyle}
+          labelStyle={tooltipLabelStyle}
+          formatter={(value: number) => [`${value} kg`, "Volume"]}
+          cursor={{ fill: "rgba(255,255,255,0.05)" }}
+        />
+        <Bar
+          dataKey="volume"
+          fill="url(#purpleGrad)"
+          radius={[6, 6, 0, 0]}
+          maxBarSize={50}
+        />
+      </BarChart>
     </ResponsiveContainer>
   )
 }
