@@ -5,25 +5,25 @@
 ### Infraestrutura & Segurança
 - **Prisma v7 + Neon PostgreSQL** — Conexão estável usando `pg` nativo + `@prisma/adapter-pg`.
 - **Auth.js v5** — Suporte a Google OAuth e Credenciais.
-- **Middleware Global** — Proteção de rotas `/admin`, validação de multi-tenancy (`gymSlug`) e bloqueio de usuários.
+- **Middleware Global** — Proteção de rotas `/admin` (Global) e `/[gymSlug]/admin` (Local), validação de multi-tenancy e bloqueio de usuários.
 - **Sessão Estendida** — JWT e Session agora incluem `role`, `gymId` e `isBlocked`.
 
-### Dashboard do Usuário
-- [x] Layout com Sidebar dinâmica (ajusta itens por Role).
+### Painel Administrativo Global (Super Admin)
+- [x] **Cockpit Global** (`/admin`) — Visão geral de todas as unidades, usuários totais e volume de treinos.
+- [x] **Gestão de Academias** — Lista e detalhamento de unidades franqueadas/parceiras.
+- [x] **Monitoramento Financeiro** — Simulação de MRR e status de contratos.
+
+### Painel Administrativo Local (Coach/Admin de Unidade)
+- [x] **Dashboard da Unidade** (`/[gymSlug]/admin`) — Métricas específicas da academia.
+- [x] **Gestão de Alunos**: Lista de alunos vinculados à academia com busca e filtros.
+- [x] **Onboarding Simplificado**: Adição de alunos apenas com Nome e E-mail.
+- [x] **Prescrição de Treinos**: Interface completa para criar "Templates" (rotinas) para alunos.
+- [x] **Sidebar Dinâmica**: Navegação que se ajusta automaticamente entre modo Aluno, Coach e Super Admin.
+
+### Dashboard do Usuário (Aluno)
 - [x] Estatísticas reais filtrando apenas treinos concluídos (`isTemplate: false`).
 - [x] Heatmap de Atividade, Gráficos de Peso, BF, Horas e Volume.
 - [x] CRUD de Medidas Corporais (14 campos compatíveis com App Mobile).
-
-### Painel Administrativo (Coach/Admin)
-- [x] **Gestão de Alunos**: Lista de alunos vinculados à academia.
-- [x] **Onboarding Simplificado**: Adição de alunos apenas com Nome e E-mail (sem burocracia de CPF/RG).
-- [x] **Prescrição de Treinos**: Interface para criar "Templates" (rotinas) para alunos específicos.
-- [x] **Reutilização de Componentes**: `ExerciseSelector` compartilhado entre Dashboard e Admin.
-
-### Banco de Dados (Schema)
-- [x] `Workout.isTemplate`: Diferencia treino planejado (rotina) de treino executado (histórico).
-- [x] `Workout.createdById`: Rastreia qual Coach prescreveu o treino.
-- [x] `User.joinedGymAt`: Data de vinculação do aluno à academia.
 
 ---
 
@@ -39,39 +39,49 @@
 
 ---
 
-## 🔲 Roadmap Atualizado
+## 🚀 Próximos Passos (Instruções para o Próximo Agente)
 
-### Prioridade Alta (Imediato)
-1. **API de Sync (Mobile ↔ Web)**:
-   - `GET /api/v1/sync/routines`: Buscar treinos com `isTemplate: true`.
-   - `POST /api/v1/sync/workouts`: Salvar execução (`isTemplate: false`) vinda do mobile.
-2. **Login no App**: Garantir que o aluno pré-cadastrado consiga entrar via Google ou recuperar senha.
+### 1. Customização de Unidade (Branding)
+- Implementar a edição de Logo e Cores Primárias em `/[gymSlug]/admin/details`.
+- Essas cores devem ser salvas no banco (`Gym.primaryColor`) e injetadas via CSS Variables no layout do tenant.
 
-### Prioridade Média
-3. **Métricas do Aluno para o Coach**: Visualização dos gráficos de progresso do aluno dentro do painel admin.
-4. **Notificações**: Avisar o aluno (Push/In-app) quando um novo treino for prescrito.
-5. **Filtros Avançados**: Buscar alunos por nome/e-mail no admin.
+### 2. API de Sync (Mobile ↔ Web)
+- Finalizar endpoints em `/api/v1/sync/`:
+  - `GET /routines`: Buscar treinos prescritos (`isTemplate: true`).
+  - `POST /workouts`: Receber execuções do mobile (`isTemplate: false`).
+- Implementar lógica de "Last Write Wins" baseada no campo `updatedAt`.
 
-### Prioridade Baixa
-6. **Configurações da Academia**: Admin poder mudar cores e logo (tenant customization).
-7. **Exportação de Dados**: PDF de evolução para o aluno.
+### 3. Relatórios e Estatísticas
+- Implementar os gráficos reais em `/admin/reports` (Global) e `/[gymSlug]/admin/reports` (Local).
+- Foco em: Crescimento de usuários, retenção por unidade e volume de prescrições.
+
+### 4. Melhorias de UI/UX
+- Adicionar feedbacks visuais (Toasts) em todas as Server Actions.
+- Implementar busca em tempo real na lista de alunos do admin.
 
 ---
 
-## Estrutura de Rotas (Admin)
+## Estrutura de Rotas (Atualizada)
 
 ```bash
-/[gymSlug]/admin/students           # Lista de alunos
-/[gymSlug]/admin/students/new       # Cadastro de aluno
-/[gymSlug]/admin/students/[id]      # Perfil/Métricas do aluno
-/[gymSlug]/admin/students/[id]/workouts/new        # Criar nova rotina
-/[gymSlug]/admin/students/[id]/workouts/[workoutId] # Editar exercícios da rotina
+/admin                              # Dashboard Global (Super Admin)
+/admin/gyms                         # Lista de academias
+/admin/users                        # Gestão global de usuários
+
+/[gymSlug]/admin                    # Dashboard da Unidade (Coach/Local Admin)
+/[gymSlug]/admin/students           # Lista de alunos da unidade
+/[gymSlug]/admin/details            # Configurações da academia (Branding)
+
+/[gymSlug]/dashboard                # Área do Aluno
+/[gymSlug]/dashboard/workouts       # Histórico de treinos
+/[gymSlug]/dashboard/measurements   # Evolução corporal
 ```
 
 ---
 
-## Arquitetura Técnica (Recente)
+## Arquitetura Técnica
 
-- **Next.js 15 Server Actions**: Todas as actions agora retornam `Promise<void>` para compatibilidade total com o atributo `action` de formulários nativos, usando redirecionamento para feedback de erro.
-- **Zod Issues**: Padronizado o uso de `validatedData.error.issues` para extração de mensagens de erro.
-- **Tenant Resolution**: O `gymId` é resolvido no login e injetado na sessão para evitar queries repetitivas por slug em rotas de admin.
+- **Dual-Admin**: Separação clara entre infraestrutura global e gestão de unidade.
+- **Tenant Resolution**: O `gymId` é injetado na sessão. O middleware garante que um Admin da Gold Gym não consiga acessar `/smartfit/admin`.
+- **Server Actions**: Padronizado o uso de `redirect` para feedback e Zod para validação rigorosa.
+- **Iconografia**: Uso consistente da biblioteca `lucide-react`.
