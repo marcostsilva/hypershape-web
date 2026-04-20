@@ -2,7 +2,8 @@ import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { ArrowLeft, Building2, User, MapPin, CreditCard, Users, MessageSquare } from "lucide-react"
+import { BrandingForm } from "./branding-form"
+import { ArrowLeft, Building2, User, MapPin, CreditCard, Users, MessageSquare, Globe } from "lucide-react"
 
 export default async function GymDetailsPage({
   params,
@@ -122,7 +123,7 @@ export default async function GymDetailsPage({
                 <p className="text-zinc-500 text-xs uppercase font-bold">Capacidade</p>
                 <div className="flex items-center gap-2 text-white">
                   <Users className="w-4 h-4 text-primary" />
-                  <span className="font-bold">{gym.studentLimit} alunos</span>
+                  <span className="font-bold">{gym.maxStudents} alunos</span>
                 </div>
               </div>
             </div>
@@ -153,23 +154,32 @@ export default async function GymDetailsPage({
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-bold uppercase">
                 <span className="text-zinc-500">Ocupação de Alunos</span>
-                <span className="text-white">{gym._count.users} / {gym.studentLimit}</span>
+                <span className="text-white">{gym._count.users} / {gym.maxStudents}</span>
               </div>
               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-primary transition-all duration-1000" 
-                  style={{ width: `${Math.min((gym._count.users / gym.studentLimit) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((gym._count.users / gym.maxStudents) * 100, 100)}%` }}
                 />
               </div>
             </div>
 
             <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Sua academia está utilizando <span className="text-white font-bold">{Math.round((gym._count.users / gym.studentLimit) * 100)}%</span> da capacidade do plano atual.
+                Sua academia está utilizando <span className="text-white font-bold">{Math.round((gym._count.users / gym.maxStudents) * 100)}%</span> da capacidade do plano atual.
               </p>
             </div>
           </div>
         </div>
+
+        {/* Customização de Marca (White-label) */}
+        <BrandingForm 
+          gymId={gym.id}
+          gymSlug={gymSlug}
+          initialPrimary={gym.primaryColor}
+          initialSecondary={gym.secondaryColor}
+          initialLogo={gym.logoUrl}
+        />
       </div>
     </div>
   )

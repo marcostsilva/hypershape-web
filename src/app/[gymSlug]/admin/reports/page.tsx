@@ -1,7 +1,8 @@
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import { FileText, Download, TrendingUp, Users, Clock, Dumbbell } from "lucide-react"
+import { FileText, TrendingUp, Users, Clock, Dumbbell } from "lucide-react"
+import { ReportCard } from "./report-card"
 
 export default async function GymReportsPage({
   params,
@@ -35,18 +36,13 @@ export default async function GymReportsPage({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {reports.map((report, i) => (
-          <div key={i} className="bg-zinc-900/40 border border-white/5 rounded-3xl p-8 hover:border-primary/50 transition-all group flex items-start gap-6">
-            <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center text-primary group-hover:scale-110 transition-transform flex-shrink-0">
-              <report.icon className="w-6 h-6" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-white mb-2">{report.title}</h3>
-              <p className="text-zinc-500 text-sm mb-6 leading-relaxed">{report.description}</p>
-              <button className="flex items-center gap-2 text-xs font-black uppercase text-primary hover:underline">
-                Gerar Relatório <Download className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
+          <ReportCard 
+            key={i}
+            title={report.title}
+            description={report.description}
+            icon={report.icon}
+            gymSlug={gymSlug}
+          />
         ))}
       </div>
 

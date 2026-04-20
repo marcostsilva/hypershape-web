@@ -6,10 +6,16 @@ datasource db {
   provider = "postgresql"
 }
 
-enum GymPlan {
-  FREE
-  BASIC
+enum AccessStatus {
+  ACTIVE
+  FROZEN
+  BLOCKED
+}
+
+enum PlanTier {
+  STARTER
   PRO
+  ELITE
   ENTERPRISE
 }
 
@@ -30,8 +36,9 @@ model Gym {
   ownerEmail     String?
   
   // Gestão de Plano
-  plan           GymPlan        @default(FREE)
-  studentLimit   Int            @default(10)
+  plan           PlanTier       @default(STARTER)
+  maxStudents    Int            @default(50)
+  status         AccessStatus   @default(ACTIVE)
   
   createdAt      DateTime       @default(now())
   updatedAt      DateTime       @updatedAt
@@ -39,6 +46,7 @@ model Gym {
   measurements   Measurement[]
   notifications  Notification[]
   users          User[]
+  gymStudents    GymStudent[]
   workouts       Workout[]
 }
 
@@ -50,8 +58,10 @@ model User {
   image                 String?
   gymId                 String?
   mode                  Mode           @default(INDEPENDENT)
+  isManaged             Boolean        @default(false)
   role                  Role           @default(SELF)
   tier                  Tier           @default(FREE)
+  accessStatus          AccessStatus   @default(ACTIVE)
   isBlocked             Boolean        @default(false)
   blockedReason         String?
   blockedAt             DateTime?
@@ -63,6 +73,7 @@ model User {
   notificationsSent     Notification[] @relation("NotificationSender")
   notificationsReceived Notification[] @relation("NotificationReceiver")
   gym                   Gym?           @relation(fields: [gymId], references: [id])
+  gyms                  GymStudent[]
   workoutsCreated       Workout[]      @relation("WorkoutCreator")
   workouts              Workout[]      @relation("WorkoutOwner")
   accounts              Account[]
@@ -117,6 +128,7 @@ model Workout {
   durationMinutes Int?
   caloriesBurned  Float?
   performedAt     DateTime
+  clientSideUuid  String?  @unique
   createdAt       DateTime @default(now())
   isTemplate      Boolean  @default(false)
   createdBy       User?    @relation("WorkoutCreator", fields: [createdById], references: [id])
@@ -151,6 +163,16 @@ model Notification {
   gym      Gym?     @relation(fields: [gymId], references: [id])
   sender   User?    @relation("NotificationSender", fields: [senderId], references: [id])
   user     User     @relation("NotificationReceiver", fields: [userId], references: [id])
+}
+
+model GymStudent {
+  id        String   @id @default(cuid())
+  gymId     String
+  userId    String
+  status    AccessStatus @default(ACTIVE)
+  gym       Gym      @relation(fields: [gymId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  @@unique([gymId, userId])
 }
 
 model PasswordResetToken {

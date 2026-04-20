@@ -5,7 +5,7 @@ import { createMeasurementAction, deleteMeasurementAction } from "./actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Ruler, Plus, Trash2, TrendingUp } from "lucide-react"
+import { Ruler, Plus, Trash2, TrendingUp, ShieldAlert } from "lucide-react"
 import { ProgressCharts } from "@/components/dashboard/charts/progress-charts"
 
 // Helper para definir os campos de circunferência do formulário
@@ -73,6 +73,8 @@ export default async function MeasurementsPage({ params }: { params: Promise<{ g
     orderBy: { measuredAt: "desc" }
   })
 
+  const isManaged = (session.user as any).isManaged === true
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -80,12 +82,20 @@ export default async function MeasurementsPage({ params }: { params: Promise<{ g
           <h1 className="text-3xl font-heading font-bold text-white tracking-tight">Medidas Corporais</h1>
           <p className="text-zinc-400 mt-1">Acompanhe sua evolução detalhada.</p>
         </div>
+        {isManaged && (
+          <div className="px-4 py-2 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-500" />
+            <p className="text-[10px] font-bold text-amber-500 uppercase tracking-widest">
+              Perfil Gerenciado: Edição Bloqueada
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Formulário de Nova Medida */}
         <div className="lg:col-span-1">
-          <div className="bg-black/40 border border-white/5 backdrop-blur-xl rounded-2xl p-6 relative overflow-hidden">
+          <div className={`bg-black/40 border border-white/5 backdrop-blur-xl rounded-2xl p-6 relative overflow-hidden ${isManaged ? 'opacity-50 grayscale-[0.5]' : ''}`}>
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Ruler className="w-24 h-24 text-primary" />
             </div>
@@ -96,97 +106,99 @@ export default async function MeasurementsPage({ params }: { params: Promise<{ g
             </h2>
 
             <form action={createMeasurementAction} className="space-y-5 relative z-10">
-              <input type="hidden" name="gymSlug" value={gymSlug} />
-              {/* Peso + Altura + BF */}
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="weight" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Peso (kg)</Label>
-                  <Input id="weight" name="weight" type="number" step="0.1" required placeholder="80.5" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+              <fieldset disabled={isManaged} className="space-y-5">
+                <input type="hidden" name="gymSlug" value={gymSlug} />
+                {/* Peso + Altura + BF */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="weight" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Peso (kg)</Label>
+                    <Input id="weight" name="weight" type="number" step="0.1" required placeholder="80.5" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="height" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Altura (m)</Label>
+                    <Input id="height" name="height" type="number" step="0.01" placeholder="1.75" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="bodyFat" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">BF (%)</Label>
+                    <Input id="bodyFat" name="bodyFat" type="number" step="0.1" placeholder="15" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="height" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Altura (m)</Label>
-                  <Input id="height" name="height" type="number" step="0.01" placeholder="1.75" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="bodyFat" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">BF (%)</Label>
-                  <Input id="bodyFat" name="bodyFat" type="number" step="0.1" placeholder="15" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                </div>
-              </div>
 
-              {/* Braços */}
-              <div className="space-y-2 pt-3 border-t border-white/5">
-                <h3 className="text-[10px] uppercase tracking-widest text-primary font-bold ml-1">Braços (cm)</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="armRight" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Braço Dir</Label>
-                    <Input id="armRight" name="armRight" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="armLeft" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Braço Esq</Label>
-                    <Input id="armLeft" name="armLeft" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Pernas */}
-              <div className="space-y-2 pt-3 border-t border-white/5">
-                <h3 className="text-[10px] uppercase tracking-widest text-primary font-bold ml-1">Pernas (cm)</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="thighRight" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Coxa Dir</Label>
-                    <Input id="thighRight" name="thighRight" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="thighLeft" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Coxa Esq</Label>
-                    <Input id="thighLeft" name="thighLeft" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="calfRight" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Panturrilha Dir</Label>
-                    <Input id="calfRight" name="calfRight" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="calfLeft" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Panturrilha Esq</Label>
-                    <Input id="calfLeft" name="calfLeft" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                {/* Braços */}
+                <div className="space-y-2 pt-3 border-t border-white/5">
+                  <h3 className="text-[10px] uppercase tracking-widest text-primary font-bold ml-1">Braços (cm)</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="armRight" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Braço Dir</Label>
+                      <Input id="armRight" name="armRight" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="armLeft" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Braço Esq</Label>
+                      <Input id="armLeft" name="armLeft" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Tronco */}
-              <div className="space-y-2 pt-3 border-t border-white/5">
-                <h3 className="text-[10px] uppercase tracking-widest text-primary font-bold ml-1">Tronco (cm)</h3>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="chest" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Peitoral</Label>
-                    <Input id="chest" name="chest" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="neck" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Pescoço</Label>
-                    <Input id="neck" name="neck" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="waist" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Cintura</Label>
-                    <Input id="waist" name="waist" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="hips" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Quadril</Label>
-                    <Input id="hips" name="hips" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
-                  </div>
-                  <div className="col-span-2 space-y-1.5">
-                    <Label htmlFor="glutes" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Glúteos</Label>
-                    <Input id="glutes" name="glutes" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                {/* Pernas */}
+                <div className="space-y-2 pt-3 border-t border-white/5">
+                  <h3 className="text-[10px] uppercase tracking-widest text-primary font-bold ml-1">Pernas (cm)</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="thighRight" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Coxa Dir</Label>
+                      <Input id="thighRight" name="thighRight" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="thighLeft" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Coxa Esq</Label>
+                      <Input id="thighLeft" name="thighLeft" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="calfRight" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Panturrilha Dir</Label>
+                      <Input id="calfRight" name="calfRight" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="calfLeft" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Panturrilha Esq</Label>
+                      <Input id="calfLeft" name="calfLeft" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Data */}
-              <div className="space-y-1.5 pt-3 border-t border-white/5">
-                <Label htmlFor="measuredAt" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Data da Avaliação</Label>
-                <Input id="measuredAt" name="measuredAt" type="datetime-local" required defaultValue={new Date().toISOString().slice(0, 16)} className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-10 text-sm" style={{ colorScheme: "dark" }} />
-              </div>
+                {/* Tronco */}
+                <div className="space-y-2 pt-3 border-t border-white/5">
+                  <h3 className="text-[10px] uppercase tracking-widest text-primary font-bold ml-1">Tronco (cm)</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="chest" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Peitoral</Label>
+                      <Input id="chest" name="chest" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="neck" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Pescoço</Label>
+                      <Input id="neck" name="neck" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="waist" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Cintura</Label>
+                      <Input id="waist" name="waist" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="hips" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Quadril</Label>
+                      <Input id="hips" name="hips" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                    <div className="col-span-2 space-y-1.5">
+                      <Label htmlFor="glutes" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Glúteos</Label>
+                      <Input id="glutes" name="glutes" type="number" step="0.1" className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-9 text-sm" />
+                    </div>
+                  </div>
+                </div>
 
-              <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 transition-all mt-4">
-                Salvar Medidas
-              </Button>
+                {/* Data */}
+                <div className="space-y-1.5 pt-3 border-t border-white/5">
+                  <Label htmlFor="measuredAt" className="text-[10px] uppercase tracking-widest text-muted-foreground ml-1">Data da Avaliação</Label>
+                  <Input id="measuredAt" name="measuredAt" type="datetime-local" required defaultValue={new Date().toISOString().slice(0, 16)} className="bg-white/5 border-white/10 text-white focus-visible:ring-primary h-10 text-sm" style={{ colorScheme: "dark" }} />
+                </div>
+
+                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg shadow-primary/20 transition-all mt-4">
+                  Salvar Medidas
+                </Button>
+              </fieldset>
             </form>
           </div>
         </div>
@@ -252,14 +264,16 @@ export default async function MeasurementsPage({ params }: { params: Promise<{ g
                             </div>
                           )}
                           
-                          <form action={async () => {
-                            "use server"
-                            await deleteMeasurementAction(record.id, gymSlug)
-                          }}>
-                            <button type="submit" className="text-zinc-600 hover:text-destructive transition-colors" title="Remover Registro">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </form>
+                          {!isManaged && (
+                            <form action={async () => {
+                              "use server"
+                              await deleteMeasurementAction(record.id, gymSlug)
+                            }}>
+                              <button type="submit" className="text-zinc-600 hover:text-destructive transition-colors" title="Remover Registro">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </form>
+                          )}
                         </div>
                       </div>
 

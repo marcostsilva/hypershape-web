@@ -20,6 +20,14 @@ export async function createStudentAction(formData: FormData): Promise<void> {
   const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
   if (!gym) redirect(`/${gymSlug}/admin/students/new?error=${encodeURIComponent("Academia não encontrada.")}`)
 
+  // Validar capacidade do plano
+  try {
+    const { validateGymCapacity } = await import("@/lib/services/gym")
+    await validateGymCapacity(gym.id)
+  } catch (error: any) {
+    redirect(`/${gymSlug}/admin/students/new?error=${encodeURIComponent(error.message)}`)
+  }
+
   // Verificar se o e-mail já existe
   const existingUser = await prisma.user.findUnique({ where: { email } })
 

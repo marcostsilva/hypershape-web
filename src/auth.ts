@@ -52,6 +52,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = (user as any).role
         token.gymId = (user as any).gymId
         token.isBlocked = (user as any).isBlocked
+        token.isManaged = (user as any).isManaged
+        token.accessStatus = (user as any).accessStatus
       }
 
       // Sempre tentar buscar o slug se tivermos gymId mas não tivermos slug no token ainda
@@ -72,6 +74,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         ;(session.user as any).gymId = token.gymId
         ;(session.user as any).gymSlug = token.gymSlug
         ;(session.user as any).isBlocked = token.isBlocked
+        ;(session.user as any).isManaged = token.isManaged
+        ;(session.user as any).accessStatus = token.accessStatus
       }
       return session
     }

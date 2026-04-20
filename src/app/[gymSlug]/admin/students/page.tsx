@@ -2,7 +2,8 @@ import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { UserPlus, Users } from "lucide-react"
+import { UserPlus, Users, ChevronRight } from "lucide-react"
+import { StudentActions } from "./student-actions"
 
 export default async function StudentsPage({
   params,
@@ -65,34 +66,34 @@ export default async function StudentsPage({
       ) : (
         <div className="grid grid-cols-1 gap-3">
           {students.map((student) => (
-            <Link
+            <div
               key={student.id}
-              href={`/${gymSlug}/admin/students/${student.id}`}
-              className="flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:border-primary/40 hover:bg-white/8 transition-all backdrop-blur-xl group"
+              className="group relative flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:border-primary/40 hover:bg-white/8 transition-all backdrop-blur-xl"
             >
+              <Link 
+                href={`/${gymSlug}/admin/students/${student.id}`}
+                className="absolute inset-0 z-0"
+              />
+              
               {/* Avatar */}
-              <div className="h-11 w-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-semibold text-lg flex-shrink-0">
+              <div className="relative z-10 h-11 w-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-semibold text-lg flex-shrink-0">
                 {student.name?.charAt(0).toUpperCase() ?? "?"}
               </div>
 
-              <div className="flex-1 min-w-0">
+              <div className="relative z-10 flex-1 min-w-0">
                 <p className="font-medium text-white truncate">{student.name ?? "Sem nome"}</p>
                 <p className="text-zinc-500 text-sm truncate">{student.email}</p>
               </div>
 
-              <div className="text-xs text-zinc-600 bg-white/5 px-2 py-1 rounded-full border border-white/5 capitalize flex-shrink-0">
-                {student.role.toLowerCase()}
+              <div className="relative z-10 text-[10px] uppercase font-bold tracking-widest text-zinc-400 bg-white/5 px-2 py-1 rounded border border-white/5 flex-shrink-0">
+                {student.role}
               </div>
 
-              <svg
-                className="h-4 w-4 text-zinc-600 group-hover:text-primary transition-colors flex-shrink-0"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </Link>
+              <div className="relative z-10 flex items-center gap-2">
+                <StudentActions studentId={student.id} studentName={student.name || ""} />
+                <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-primary transition-colors" />
+              </div>
+            </div>
           ))}
         </div>
       )}
