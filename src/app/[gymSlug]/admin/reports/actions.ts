@@ -32,7 +32,7 @@ export async function generateReportAction(type: string, gymSlug: string) {
     case "Retenção e Churn (Local)":
       const students = await prisma.user.findMany({
         where: { gymId: gym.id },
-        select: { id: true, lastWorkout: true }, // assuming lastWorkout exists or we compute it
+        select: { id: true, workouts: { take: 1, orderBy: { performedAt: 'desc' } } },
       })
       // Lógica simplificada de churn
       return {

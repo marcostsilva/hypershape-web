@@ -67,7 +67,7 @@ export async function POST(req: Request) {
     console.error("Sync error:", error)
     return NextResponse.json({ 
       error: "Erro na sincronização", 
-      details: error instanceof z.ZodError ? error.errors : "Dados inválidos" 
+      details: error instanceof z.ZodError ? error.issues : "Dados inválidos" 
     }, { status: 400 })
   }
 }

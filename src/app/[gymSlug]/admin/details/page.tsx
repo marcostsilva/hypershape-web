@@ -100,7 +100,15 @@ export default async function GymDetailsPage({
               <MapPin className="w-4 h-4 text-zinc-500 mt-1" />
               <div>
                 <p className="text-zinc-500 text-xs uppercase font-bold">Endereço</p>
-                <p className="text-white text-sm leading-relaxed">{gym.address || "Não informado"}</p>
+                <p className="text-white text-sm leading-relaxed">
+                  {gym.street ? (
+                    <>
+                      {gym.street}, {gym.number} {gym.complement && `- ${gym.complement}`} <br />
+                      {gym.neighborhood} - {gym.city}/{gym.state} <br />
+                      CEP: {gym.zipCode}
+                    </>
+                  ) : "Não informado"}
+                </p>
               </div>
             </div>
           </div>

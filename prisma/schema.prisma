@@ -32,7 +32,13 @@ model Gym {
   cnpj           String?        @unique
   corporateName  String?
   tradeName      String?
-  address        String?
+  street         String?
+  number         String?
+  complement     String?
+  neighborhood   String?
+  city           String?
+  state          String?
+  zipCode        String?
   ownerEmail     String?
   
   // Gestão de Plano

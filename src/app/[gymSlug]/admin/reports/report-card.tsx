@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Download, Loader2 } from "lucide-react"
 import { generateReportAction } from "./actions"
-import { useToast } from "@/hooks/use-toast" // Assumindo que existe ou usarei alert para simplificar se não houver
+import { toast } from "sonner"
 
 interface ReportCardProps {
   title: string
@@ -19,9 +19,9 @@ export function ReportCard({ title, description, icon: Icon, gymSlug }: ReportCa
     setLoading(true)
     try {
       const result = await generateReportAction(title, gymSlug)
-      alert(result.summary)
+      toast.success(result.summary)
     } catch (error) {
-      alert("Erro ao gerar relatório")
+      toast.error("Erro ao gerar relatório")
     } finally {
       setLoading(false)
     }

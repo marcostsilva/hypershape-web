@@ -72,6 +72,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
   if (!session?.user) redirect("/login")
 
   const userId = session.user.id
+  const user = session.user as any
 
   let gymId: string | null = null
   let resolvedGymSlug = gymSlug
@@ -80,10 +81,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
     const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
     if (!gym) redirect("/me/dashboard")
     gymId = gym.id
-  } else if (session.user.gymId) {
+  } else if (user.gymId) {
     // Se estiver em /me mas tiver uma academia vinculada, busca o slug dela
     const gym = await prisma.gym.findUnique({ 
-      where: { id: session.user.gymId },
+      where: { id: user.gymId },
       select: { slug: true, id: true }
     })
     if (gym) {
@@ -214,10 +215,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
       {/* Header com Avatar */}
       <div className="flex items-center gap-5">
         <div className="relative">
-          {session.user.image ? (
+          {user.image ? (
             <Image
-              src={session.user.image}
-              alt={session.user.name || "Avatar"}
+              src={user.image}
+              alt={user.name || "Avatar"}
               width={80}
               height={80}
               className="rounded-full border-2 border-primary/30 shadow-lg shadow-primary/10"
@@ -225,7 +226,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
           ) : (
             <div className="w-20 h-20 rounded-full bg-zinc-800 border-2 border-white/10 flex items-center justify-center">
               <span className="text-2xl font-heading font-bold text-zinc-400">
-                {(session.user.name || "A").charAt(0).toUpperCase()}
+                {(user.name || "A").charAt(0).toUpperCase()}
               </span>
             </div>
           )}
@@ -236,14 +237,14 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
         <div className="flex-1 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-heading font-bold text-white tracking-tight">
-              {session.user.name || "Atleta"}
+              {user.name || "Atleta"}
             </h1>
             <p className="text-zinc-500 text-sm">
-              @{session.user.email?.split("@")[0] || "usuario"}
+              @{user.email?.split("@")[0] || "usuario"}
             </p>
           </div>
           
-          {(session.user.role === "ADMIN" || session.user.role === "COACH") && (
+          {(user.role === "ADMIN" || user.role === "COACH") && (
             <Link 
               href={resolvedGymSlug === "me" ? "/admin" : `/${resolvedGymSlug}/admin`}
               className="bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-4 py-2 rounded-xl border border-white/10 flex items-center gap-2 transition-all group"

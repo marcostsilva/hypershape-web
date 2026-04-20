@@ -39,7 +39,7 @@ export default async function FinancePage({
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">
           <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-2">Plano Atual</p>
           <div className="text-2xl font-black text-primary uppercase">{gym.plan}</div>
-          <p className="text-zinc-500 text-xs mt-4 italic">Limite de {gym.studentLimit} alunos</p>
+          <p className="text-zinc-500 text-xs mt-4 italic">Limite de {gym.maxStudents} alunos</p>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md">

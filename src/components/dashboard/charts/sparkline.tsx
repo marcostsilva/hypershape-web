@@ -30,7 +30,7 @@ export function Sparkline({ data, color = "#39FF14", unit = "kg" }: SparklinePro
               fontSize: "11px",
             }}
             labelStyle={{ color: "rgba(255,255,255,0.5)", fontSize: "9px" }}
-            formatter={(value: number) => [`${value} ${unit}`, ""]}
+            formatter={(value: any) => [`${value} ${unit}`, ""]}
           />
           <Area
             type="monotone"

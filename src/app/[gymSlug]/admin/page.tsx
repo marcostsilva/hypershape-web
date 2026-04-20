@@ -253,7 +253,7 @@ export default async function AdminDashboardPage(props: {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Membros Totais</span>
-                <span className="text-zinc-300">{gym._count.users} / {gym.studentLimit}</span>
+                <span className="text-zinc-300">{gym._count.users} / {gym.maxStudents}</span>
               </div>
             </div>
           </div>

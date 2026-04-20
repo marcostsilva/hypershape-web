@@ -5,22 +5,83 @@ import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
+import { Prisma } from "@prisma/client"
+
+function validateCNPJ(cnpj: string) {
+  cnpj = cnpj.replace(/[^\d]+/g, '')
+  if (cnpj === '') return true // Opcional no schema
+  if (cnpj.length !== 14) return false
+
+  // Elimina CNPJs conhecidos inválidos
+  if (/^(\d)\1+$/.test(cnpj)) return false
+
+  // Valida DVs
+  let tamanho = cnpj.length - 2
+  let numeros = cnpj.substring(0, tamanho)
+  let digitos = cnpj.substring(tamanho)
+  let soma = 0
+  let pos = tamanho - 7
+  for (let i = tamanho; i >= 1; i--) {
+    soma += parseInt(numeros.charAt(tamanho - i)) * pos--
+    if (pos < 2) pos = 9
+  }
+  let resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11)
+  if (resultado !== parseInt(digitos.charAt(0))) return false
+
+  tamanho = tamanho + 1
+  numeros = cnpj.substring(0, tamanho)
+  soma = 0
+  pos = tamanho - 7
+  for (let i = tamanho; i >= 1; i--) {
+    soma += parseInt(numeros.charAt(tamanho - i)) * pos--
+    if (pos < 2) pos = 9
+  }
+  resultado = soma % 11 < 2 ? 0 : 11 - (soma % 11)
+  if (resultado !== parseInt(digitos.charAt(1))) return false
+
+  return true
+}
+
 const gymSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   slug: z.string().min(3, "Slug deve ter pelo menos 3 caracteres").toLowerCase(),
-  cnpj: z.string().optional(),
-  corporateName: z.string().optional(),
-  tradeName: z.string().optional(),
-  address: z.string().optional(),
+  cnpj: z.string().refine((val) => validateCNPJ(val), {
+    message: "CNPJ inválido",
+  }).optional().or(z.literal("")),
+  corporateName: z.string().optional().or(z.literal("")),
+  tradeName: z.string().optional().or(z.literal("")),
+  
+  // Endereço Estruturado
+  street: z.string().optional().or(z.literal("")),
+  number: z.string().optional().or(z.literal("")),
+  complement: z.string().optional().or(z.literal("")),
+  neighborhood: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  state: z.string().optional().or(z.literal("")).refine(val => !val || val.length === 2, "UF deve ter 2 caracteres"),
+  zipCode: z.string().optional().or(z.literal("")).refine(val => !val || /^\d{5}-?\d{3}$/.test(val), "CEP inválido"),
+  
   ownerEmail: z.string().email("E-mail inválido").optional().or(z.literal("")),
-  plan: z.enum(["FREE", "BASIC", "PRO", "ENTERPRISE"]),
-  studentLimit: z.number().int().min(1),
+  plan: z.enum(["STARTER", "PRO", "ELITE", "ENTERPRISE"]),
+  maxStudents: z.number().int().min(1),
 })
+
+function handlePrismaError(error: any) {
+  if (error instanceof Prisma.PrismaClientKnownRequestError) {
+    if (error.code === 'P2002') {
+      const target = (error.meta?.target as string[]) || []
+      if (target.includes('slug')) return "Este slug já está em uso por outra unidade."
+      if (target.includes('cnpj')) return "Este CNPJ já está cadastrado no sistema."
+      if (target.includes('customDomain')) return "Este domínio já está em uso."
+      return "Já existe um registro com estes dados únicos."
+    }
+  }
+  return error.message || "Ocorreu um erro inesperado no servidor."
+}
 
 async function checkSuperAdmin() {
   const session = await auth()
   if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
-    throw new Error("Acesso negado")
+    throw new Error("Acesso negado: Somente Super Admins podem realizar esta operação.")
   }
   return session
 }
@@ -30,13 +91,12 @@ export async function createGymAction(formData: z.infer<typeof gymSchema>) {
     await checkSuperAdmin()
     const validated = gymSchema.parse(formData)
     
-    // Verificar se o proprietário existe caso o e-mail tenha sido informado
     if (validated.ownerEmail) {
       const owner = await prisma.user.findUnique({
         where: { email: validated.ownerEmail }
       })
       if (!owner) {
-        throw new Error(`Usuário com e-mail ${validated.ownerEmail} não encontrado. Cadastre o usuário primeiro.`)
+        return { error: `Usuário com e-mail ${validated.ownerEmail} não encontrado. Cadastre o usuário primeiro.` }
       }
     }
 
@@ -44,7 +104,6 @@ export async function createGymAction(formData: z.infer<typeof gymSchema>) {
       data: validated
     })
 
-    // Se informou proprietário, vincula e promove
     if (validated.ownerEmail) {
       await prisma.user.update({
         where: { email: validated.ownerEmail },
@@ -59,7 +118,8 @@ export async function createGymAction(formData: z.infer<typeof gymSchema>) {
     revalidatePath("/admin")
     return { data: gym }
   } catch (error: any) {
-    return { error: error.message || "Erro ao criar academia" }
+    console.error("Error creating gym:", error)
+    return { error: handlePrismaError(error) }
   }
 }
 
@@ -73,7 +133,7 @@ export async function updateGymAction(id: string, formData: z.infer<typeof gymSc
         where: { email: validated.ownerEmail }
       })
       if (!owner) {
-        throw new Error(`Usuário com e-mail ${validated.ownerEmail} não encontrado.`)
+        return { error: `Usuário com e-mail ${validated.ownerEmail} não encontrado.` }
       }
     }
 
@@ -97,19 +157,19 @@ export async function updateGymAction(id: string, formData: z.infer<typeof gymSc
     revalidatePath(`/admin/gyms/${id}`)
     return { data: gym }
   } catch (error: any) {
-    return { error: error.message || "Erro ao atualizar academia" }
+    console.error("Error updating gym:", error)
+    return { error: handlePrismaError(error) }
   }
 }
 
 export async function deleteGymAction(id: string) {
   try {
     await checkSuperAdmin()
-    
     await prisma.gym.delete({ where: { id } })
-    
     revalidatePath("/admin")
     return { success: true }
   } catch (error: any) {
-    return { error: error.message || "Erro ao deletar academia" }
+    console.error("Error deleting gym:", error)
+    return { error: handlePrismaError(error) }
   }
 }

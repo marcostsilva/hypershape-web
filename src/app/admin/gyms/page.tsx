@@ -91,7 +91,7 @@ export default async function AdminGymsPage({
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black text-primary">{gym.plan}</span>
                     <span className="text-zinc-600 text-xs">/</span>
-                    <span className="text-xs text-white">{gym._count.users} de {gym.studentLimit}</span>
+                    <span className="text-xs text-white">{gym._count.users} de {gym.maxStudents}</span>
                   </div>
                 </div>
                 <div>

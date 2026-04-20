@@ -66,7 +66,7 @@ export function WeeklyHoursChart({ data }: WeeklyHoursProps) {
         <Tooltip
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
-          formatter={(value: number) => [`${value.toFixed(1)}h`, "Horas"]}
+          formatter={(value: any) => [`${value?.toFixed(1) || 0}h`, "Horas"]}
           cursor={{ fill: "rgba(255,255,255,0.05)" }}
         />
         <Bar
@@ -112,7 +112,7 @@ export function MonthlyHoursChart({ data }: MonthlyHoursProps) {
         <Tooltip
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
-          formatter={(value: number) => [`${value.toFixed(1)}h`, "Horas"]}
+          formatter={(value: any) => [`${value?.toFixed(1) || 0}h`, "Horas"]}
           cursor={{ fill: "rgba(255,255,255,0.05)" }}
         />
         <Bar
@@ -158,7 +158,7 @@ export function CaloriesWeekChart({ data }: CaloriesWeekProps) {
         <Tooltip
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
-          formatter={(value: number) => [`${Math.round(value)} kcal`, "Calorias"]}
+          formatter={(value: any) => [`${Math.round(value || 0)} kcal`, "Calorias"]}
         />
         <Area
           type="monotone"
@@ -206,7 +206,7 @@ export function MonthlyVolumeChart({ data }: MonthlyVolumeProps) {
         <Tooltip
           contentStyle={tooltipStyle}
           labelStyle={tooltipLabelStyle}
-          formatter={(value: number) => [`${value} kg`, "Volume"]}
+          formatter={(value: any) => [`${value || 0} kg`, "Volume"]}
           cursor={{ fill: "rgba(255,255,255,0.05)" }}
         />
         <Bar
