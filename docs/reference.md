@@ -41,15 +41,8 @@
 
 ## 🚀 Próximos Passos (Instruções para o Próximo Agente)
 
-### 1. Customização de Unidade (Branding)
-- Implementar a edição de Logo e Cores Primárias em `/[gymSlug]/admin/details`.
-- Essas cores devem ser salvas no banco (`Gym.primaryColor`) e injetadas via CSS Variables no layout do tenant.
-
-### 2. API de Sync (Mobile ↔ Web)
-- Finalizar endpoints em `/api/v1/sync/`:
-  - `GET /routines`: Buscar treinos prescritos (`isTemplate: true`).
-  - `POST /workouts`: Receber execuções do mobile (`isTemplate: false`).
-- Implementar lógica de "Last Write Wins" baseada no campo `updatedAt`.
+- [x] **Customização de Unidade (Branding)**: Cores e Logo injetados via CSS Variables e layouts dinâmicos.
+- [x] **API de Sync (Mobile ↔ Web)**: Endpoints de `routines`, `workouts` e `measurements` com suporte a idempotência e "Last Write Wins".
 
 ### 3. Relatórios e Estatísticas
 - Implementar os gráficos reais em `/admin/reports` (Global) e `/[gymSlug]/admin/reports` (Local).

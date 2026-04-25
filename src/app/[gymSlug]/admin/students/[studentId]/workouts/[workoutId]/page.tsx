@@ -1,8 +1,7 @@
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { ExerciseSelector } from "@/app/[gymSlug]/dashboard/workouts/[workoutId]/exercise-selector"
 import { fetchWorkoutApiExercises } from "@/lib/workout-api"
 import exerciseCatalogStatic from "@/lib/exercise-data"
@@ -47,12 +46,7 @@ export default async function AdminWorkoutEditPage({
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <Link 
-          href={`/${gymSlug}/admin/students/${studentId}`}
-          className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
+        <BackButton />
         <div>
           <h1 className="text-2xl font-heading font-bold text-white tracking-tight">{workout.name}</h1>
           <p className="text-zinc-500 text-sm">Prescreva os exercícios, séries e carga para o aluno.</p>

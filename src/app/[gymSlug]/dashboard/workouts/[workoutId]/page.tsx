@@ -1,8 +1,7 @@
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { ExerciseSelector } from "./exercise-selector"
 import { fetchWorkoutApiExercises } from "@/lib/workout-api"
 import exerciseCatalogStatic from "@/lib/exercise-data"
@@ -42,12 +41,7 @@ export default async function WorkoutEditPage({ params }: { params: Promise<{ gy
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link 
-          href={`/${gymSlug}/dashboard/workouts`}
-          className="text-zinc-400 hover:text-white transition-colors"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </Link>
+        <BackButton className="text-zinc-400 hover:text-white transition-colors p-2 -ml-2" />
         <div>
           <h1 className="text-2xl font-heading font-bold text-white tracking-tight">{workout.name}</h1>
           <p className="text-zinc-500 text-sm">Selecione exercícios e configure séries, repetições e carga.</p>

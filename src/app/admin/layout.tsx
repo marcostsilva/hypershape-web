@@ -1,15 +1,17 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
 import { AdminSidebar } from "@/components/admin/sidebar"
+import { requireTermsAccepted } from "@/lib/require-terms"
 
 export default async function SuperAdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  await requireTermsAccepted()
   const session = await auth()
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/")
   }
 

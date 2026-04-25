@@ -1,0 +1,9 @@
+rules:
+  - filePattern: "**"
+    systemPromptFile: "./docs/AGENT_RULES.md"
+    skills:
+      - system-design
+      - security-audit
+      - clean-code
+      - api-design
+      - repo-analysis

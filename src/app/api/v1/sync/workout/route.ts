@@ -7,11 +7,12 @@ const workoutSyncSchema = z.object({
   workouts: z.array(z.object({
     clientSideUuid: z.string().uuid(),
     name: z.string(),
-    exercises: z.any(), // JSON de exercícios
+    exercises: z.any(),
     durationMinutes: z.number().optional(),
     caloriesBurned: z.number().optional(),
     performedAt: z.string().datetime(),
-    gymId: z.string().optional()
+    updatedAt: z.string().datetime().optional(),
+    organizationId: z.string().optional()
   }))
 })
 
@@ -25,11 +26,11 @@ export async function POST(req: Request) {
   const userId = session.user.id!
   const user = await prisma.user.findUnique({
     where: { id: userId },
-    select: { accessStatus: true, isBlocked: true }
+    select: { isBlocked: true }
   })
 
-  if (!user || user.isBlocked || user.accessStatus !== "ACTIVE") {
-    return NextResponse.json({ error: "Acesso bloqueado ou inativo" }, { status: 403 })
+  if (!user || user.isBlocked) {
+    return NextResponse.json({ error: "Acesso bloqueado" }, { status: 403 })
   }
 
   try {
@@ -39,28 +40,53 @@ export async function POST(req: Request) {
     const results = []
 
     for (const workout of workouts) {
-      // Upsert para garantir idempotência via clientSideUuid
-      const saved = await prisma.workout.upsert({
+      const incomingUpdate = workout.updatedAt ? new Date(workout.updatedAt) : new Date()
+      
+      // Buscar se já existe
+      const existing = await prisma.workout.findUnique({
         where: { clientSideUuid: workout.clientSideUuid },
-        update: {}, // Não atualiza nada se já existir
-        create: {
-          userId,
-          gymId: workout.gymId,
-          name: workout.name,
-          exercises: workout.exercises,
-          durationMinutes: workout.durationMinutes,
-          caloriesBurned: workout.caloriesBurned,
-          performedAt: new Date(workout.performedAt),
-          clientSideUuid: workout.clientSideUuid
-        }
+        select: { id: true, updatedAt: true }
       })
-      results.push(saved.id)
+
+      if (!existing) {
+        // Criar novo
+        const saved = await prisma.workout.create({
+          data: {
+            userId,
+            organizationId: workout.organizationId,
+            name: workout.name,
+            exercises: workout.exercises,
+            durationMinutes: workout.durationMinutes,
+            caloriesBurned: workout.caloriesBurned,
+            performedAt: new Date(workout.performedAt),
+            clientSideUuid: workout.clientSideUuid,
+            updatedAt: incomingUpdate
+          }
+        })
+        results.push({ id: saved.id, status: "created" })
+      } else if (incomingUpdate > existing.updatedAt) {
+        // Atualizar se o recebido for mais novo (Last Write Wins)
+        const updated = await prisma.workout.update({
+          where: { id: existing.id },
+          data: {
+            name: workout.name,
+            exercises: workout.exercises,
+            durationMinutes: workout.durationMinutes,
+            caloriesBurned: workout.caloriesBurned,
+            performedAt: new Date(workout.performedAt),
+            updatedAt: incomingUpdate
+          }
+        })
+        results.push({ id: updated.id, status: "updated" })
+      } else {
+        results.push({ id: existing.id, status: "skipped" })
+      }
     }
 
     return NextResponse.json({ 
       success: true, 
       syncedCount: results.length,
-      ids: results 
+      results 
     })
 
   } catch (error) {

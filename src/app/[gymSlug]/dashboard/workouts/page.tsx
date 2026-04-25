@@ -24,17 +24,17 @@ export default async function WorkoutsPage({ params }: { params: Promise<{ gymSl
   const session = await auth()
   if (!session?.user) redirect("/login")
 
-  let gymId: string | null = null
+  let organizationId: string | null = null
   if (gymSlug !== "me") {
-    const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
+    const gym = await prisma.organization.findUnique({ where: { slug: gymSlug } })
     if (!gym) redirect("/me/dashboard")
-    gymId = gym.id
+    organizationId = gym.id
   }
 
   const workouts = await prisma.workout.findMany({
     where: { 
       userId: session.user.id,
-      gymId: gymId 
+      organizationId: organizationId 
     },
     orderBy: { performedAt: "desc" }
   })

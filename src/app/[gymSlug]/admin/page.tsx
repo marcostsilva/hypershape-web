@@ -24,11 +24,11 @@ export default async function AdminDashboardPage(props: {
   }
 
   // Buscar academia para garantir que o slug é válido
-  const gym = await prisma.gym.findUnique({
+  const gym = await prisma.organization.findUnique({
     where: { slug: gymSlug },
     include: {
       _count: {
-        select: { users: true, workouts: true }
+        select: { memberships: true, workouts: true }
       }
     }
   })
@@ -38,31 +38,32 @@ export default async function AdminDashboardPage(props: {
   }
 
   // Estatísticas rápidas
-  const totalStudents = await prisma.user.count({
+  const totalStudents = await prisma.membership.count({
     where: { 
-      gymId: gym.id,
+      organizationId: gym.id,
       role: 'MEMBER'
     }
   })
 
   const totalTemplates = await prisma.workout.count({
     where: { 
-      gymId: gym.id,
+      organizationId: gym.id,
       isTemplate: true
     }
   })
 
-  const recentStudents = await prisma.user.findMany({
-    where: { gymId: gym.id, role: 'MEMBER' },
-    orderBy: { createdAt: 'desc' },
+  const recentMemberships = await prisma.membership.findMany({
+    where: { organizationId: gym.id, role: 'MEMBER' },
+    include: { user: true },
+    orderBy: { joinedAt: 'desc' },
     take: 5
   })
 
   // Distribuição de Status
   const statusDistribution = [
     { name: "Ativos", value: totalStudents, color: "#10b981" },
-    { name: "Congelados", value: await prisma.gymStudent.count({ where: { gymId: gym.id, status: 'FROZEN' } }), color: "#3b82f6" },
-    { name: "Bloqueados", value: await prisma.gymStudent.count({ where: { gymId: gym.id, status: 'BLOCKED' } }), color: "#ef4444" },
+    { name: "Congelados", value: await prisma.membership.count({ where: { organizationId: gym.id, status: 'FROZEN' } }), color: "#3b82f6" },
+    { name: "Bloqueados", value: await prisma.membership.count({ where: { organizationId: gym.id, status: 'BLOCKED' } }), color: "#ef4444" },
   ]
 
   // Dados de Retenção (Simulados para visualização, mas baseados no total)
@@ -89,7 +90,7 @@ export default async function AdminDashboardPage(props: {
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Link 
-              href={`/${gymSlug}/dashboard`}
+              href="/"
               className="text-zinc-500 hover:text-white flex items-center gap-1 text-xs font-bold transition-colors"
             >
               <ArrowRight className="w-3 h-3 rotate-180" />
@@ -190,19 +191,19 @@ export default async function AdminDashboardPage(props: {
             </Link>
           </div>
           <div className="divide-y divide-white/5">
-            {recentStudents.length > 0 ? (
-              recentStudents.map((student) => (
+            {recentMemberships.length > 0 ? (
+              recentMemberships.map((membership) => (
                 <Link 
-                  key={student.id} 
-                  href={`/${gymSlug}/admin/students/${student.id}`}
+                  key={membership.id} 
+                  href={`/${gymSlug}/admin/students/${membership.userId}`}
                   className="flex items-center gap-4 p-6 hover:bg-white/5 transition-all group"
                 >
                   <div className="w-10 h-10 bg-zinc-800 rounded-full flex items-center justify-center text-white font-bold group-hover:bg-primary group-hover:text-black transition-all">
-                    {student.name?.[0].toUpperCase()}
+                    {membership.user.name?.[0].toUpperCase() || "A"}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-white font-bold truncate">{student.name}</p>
-                    <p className="text-zinc-500 text-xs truncate">{student.email}</p>
+                    <p className="text-white font-bold truncate">{membership.user.name}</p>
+                    <p className="text-zinc-500 text-xs truncate">{membership.user.email}</p>
                   </div>
                   <ArrowRight className="w-4 h-4 text-zinc-600 group-hover:text-primary transition-all translate-x-0 group-hover:translate-x-1" />
                 </Link>
@@ -253,7 +254,7 @@ export default async function AdminDashboardPage(props: {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-zinc-500">Membros Totais</span>
-                <span className="text-zinc-300">{gym._count.users} / {gym.maxStudents}</span>
+                <span className="text-zinc-300">{gym._count.memberships} / {gym.maxStudents}</span>
               </div>
             </div>
           </div>

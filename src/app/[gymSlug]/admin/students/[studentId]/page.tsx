@@ -1,8 +1,8 @@
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft, Dumbbell } from "lucide-react"
+import { Dumbbell } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { ResendActivationButton } from "@/components/admin/resend-activation-button"
 
 export default async function StudentProfilePage({
@@ -17,22 +17,31 @@ export default async function StudentProfilePage({
     redirect("/login")
   }
 
-  const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
+  const gym = await prisma.organization.findUnique({ where: { slug: gymSlug } })
   if (!gym) redirect("/me/dashboard")
 
-  const student = await prisma.user.findUnique({
-    where: { id: studentId }
+  // Buscar o membership deste aluno nesta academia específica
+  const membership = await prisma.membership.findFirst({
+    where: { 
+      userId: studentId,
+      organizationId: gym.id
+    },
+    include: {
+      user: true
+    }
   })
 
-  if (!student || student.gymId !== gym.id) {
+  if (!membership) {
     redirect(`/${gymSlug}/admin/students`)
   }
+
+  const student = membership.user
 
   // Buscar os treinos planejado (templates) pelo personal para este aluno
   const plannedWorkouts = await prisma.workout.findMany({
     where: {
       userId: student.id,
-      gymId: gym.id,
+      organizationId: gym.id,
       isTemplate: true,
     },
     orderBy: { createdAt: "desc" }
@@ -41,12 +50,7 @@ export default async function StudentProfilePage({
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4 mb-8">
-        <Link 
-          href={`/${gymSlug}/admin/students`}
-          className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
+        <BackButton />
         <div className="flex-1 flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-heading font-bold text-white tracking-tight">

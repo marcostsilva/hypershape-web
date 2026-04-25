@@ -1,9 +1,9 @@
 import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { BrandingForm } from "./branding-form"
 import { ArrowLeft, Building2, User, MapPin, CreditCard, Users, MessageSquare, Globe } from "lucide-react"
+import { BackButton } from "@/components/back-button"
+import { BrandingForm } from "./branding-form"
 
 export default async function GymDetailsPage({
   params,
@@ -17,11 +17,11 @@ export default async function GymDetailsPage({
     redirect("/login")
   }
 
-  const gym = await prisma.gym.findUnique({
+  const gym = await prisma.organization.findUnique({
     where: { slug: gymSlug },
     include: {
       _count: {
-        select: { users: true }
+        select: { memberships: true }
       }
     }
   })
@@ -29,9 +29,9 @@ export default async function GymDetailsPage({
   if (!gym) redirect("/")
 
   // Verificar se o usuário é ADMIN desta academia
-  if ((session.user as any).role !== "ADMIN" || (session.user as any).gymId !== gym.id) {
-    // Permitir se for Super Admin (gymId null e role ADMIN)
-    if (!(!(session.user as any).gymId && (session.user as any).role === "ADMIN")) {
+  if ((session.user as any).role !== "ADMIN" || (session.user as any).organizationId !== gym.id) {
+    // Permitir se for Super Admin (organizationId null e role ADMIN)
+    if (!(!(session.user as any).organizationId && (session.user as any).role === "ADMIN")) {
       redirect(`/${gymSlug}/dashboard`)
     }
   }
@@ -40,13 +40,10 @@ export default async function GymDetailsPage({
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <Link 
-          href={`/${gymSlug}/admin`}
-          className="text-zinc-500 hover:text-white flex items-center gap-1 text-xs font-bold transition-colors w-fit"
-        >
+        <BackButton className="p-0 bg-transparent hover:bg-transparent text-zinc-500 hover:text-white flex items-center gap-1 text-xs font-bold transition-colors w-fit">
           <ArrowLeft className="w-3 h-3" />
           Voltar ao Painel
-        </Link>
+        </BackButton>
         <div className="flex justify-between items-end">
           <div>
             <h1 className="text-3xl font-heading font-bold text-white tracking-tight">
@@ -162,19 +159,19 @@ export default async function GymDetailsPage({
             <div className="space-y-2">
               <div className="flex justify-between text-xs font-bold uppercase">
                 <span className="text-zinc-500">Ocupação de Alunos</span>
-                <span className="text-white">{gym._count.users} / {gym.maxStudents}</span>
+                <span className="text-white">{gym._count.memberships} / {gym.maxStudents}</span>
               </div>
               <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-primary transition-all duration-1000" 
-                  style={{ width: `${Math.min((gym._count.users / gym.maxStudents) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((gym._count.memberships / gym.maxStudents) * 100, 100)}%` }}
                 />
               </div>
             </div>
 
             <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Sua academia está utilizando <span className="text-white font-bold">{Math.round((gym._count.users / gym.maxStudents) * 100)}%</span> da capacidade do plano atual.
+                Sua academia está utilizando <span className="text-white font-bold">{Math.round((gym._count.memberships / gym.maxStudents) * 100)}%</span> da capacidade do plano atual.
               </p>
             </div>
           </div>
@@ -182,7 +179,7 @@ export default async function GymDetailsPage({
 
         {/* Customização de Marca (White-label) */}
         <BrandingForm 
-          gymId={gym.id}
+          organizationId={gym.id}
           gymSlug={gymSlug}
           initialPrimary={gym.primaryColor}
           initialSecondary={gym.secondaryColor}

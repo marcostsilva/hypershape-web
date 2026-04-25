@@ -1,0 +1,24 @@
+{
+  "users": [
+    {
+      "id": "cmo62t3rm0000thu2ctg87pc4",
+      "email": "admin@hypershape.com",
+      "password": "$2b$10$6Lhq.PaLRWtmVVIlrdPZnuJESXtmolSugQ3uvSn4pAsSh8zPesVDq",
+      "name": "HyperShape Admin",
+      "image": null,
+      "gymId": null,
+      "mode": "INDEPENDENT",
+      "role": "ADMIN",
+      "tier": "FREE",
+      "isBlocked": false,
+      "blockedReason": null,
+      "blockedAt": null,
+      "joinedGymAt": null,
+      "createdAt": "2026-04-19T21:05:00.371Z",
+      "emailVerified": null,
+      "accessStatus": "ACTIVE",
+      "isManaged": false
+    }
+  ],
+  "gyms": []
+}

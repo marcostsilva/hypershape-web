@@ -59,17 +59,17 @@ export default async function MeasurementsPage({ params }: { params: Promise<{ g
   const session = await auth()
   if (!session?.user) redirect("/login")
 
-  let gymId: string | null = null
+  let organizationId: string | null = null
   if (gymSlug !== "me") {
-    const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
+    const gym = await prisma.organization.findUnique({ where: { slug: gymSlug } })
     if (!gym) redirect("/me/dashboard")
-    gymId = gym.id
+    organizationId = gym.id
   }
 
   const history = await prisma.measurement.findMany({
     where: { 
       userId: session.user.id,
-      gymId: gymId
+      organizationId: organizationId
     },
     orderBy: { measuredAt: "desc" }
   })

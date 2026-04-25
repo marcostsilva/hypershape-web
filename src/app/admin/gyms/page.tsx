@@ -14,21 +14,21 @@ export default async function AdminGymsPage({
   const currentPage = Number(page) || 1
   const pageSize = 10
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/")
   }
 
   const [totalGyms, gyms] = await Promise.all([
-    prisma.gym.count({
+    prisma.organization.count({
       where: q ? { name: { contains: q, mode: 'insensitive' } } : {}
     }),
-    prisma.gym.findMany({
+    prisma.organization.findMany({
       where: q ? { name: { contains: q, mode: 'insensitive' } } : {},
       take: pageSize,
       skip: (currentPage - 1) * pageSize,
       include: {
         _count: {
-          select: { users: true, workouts: true }
+          select: { memberships: true, workouts: true }
         }
       },
       orderBy: { createdAt: 'desc' }
@@ -91,7 +91,7 @@ export default async function AdminGymsPage({
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-black text-primary">{gym.plan}</span>
                     <span className="text-zinc-600 text-xs">/</span>
-                    <span className="text-xs text-white">{gym._count.users} de {gym.maxStudents}</span>
+                    <span className="text-xs text-white">{gym._count.memberships} de {gym.maxStudents}</span>
                   </div>
                 </div>
                 <div>

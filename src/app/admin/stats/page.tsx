@@ -6,12 +6,12 @@ import { BarChart3, TrendingUp, Users, Building2, Activity, Globe, Zap } from "l
 export default async function GlobalStatsPage() {
   const session = await auth()
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/")
   }
 
   const [gymCount, userCount, workoutCount] = await Promise.all([
-    prisma.gym.count(),
+    prisma.organization.count(),
     prisma.user.count(),
     prisma.workout.count(),
   ])

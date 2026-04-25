@@ -5,7 +5,7 @@ import { GymForm } from "@/components/admin/gym-form"
 export default async function NewGymPage() {
   const session = await auth()
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/")
   }
 

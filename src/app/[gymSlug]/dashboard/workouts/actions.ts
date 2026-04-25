@@ -5,16 +5,17 @@ import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
 import { CreateWorkoutSchema, UpdateWorkoutExercisesSchema } from "@/lib/validations/features"
+import { requireAuth, assertOwnership, AuthError } from "@/lib/auth-guard"
+import { audit, AuditAction } from "@/lib/services/audit"
 
 export async function createWorkoutAction(formData: FormData): Promise<void> {
-  const session = await auth()
-  if (!session?.user) redirect("/login")
+  const ctx = await requireAuth()
 
   const gymSlug = formData.get("gymSlug") as string
-  let gymId: string | null = null
+  let organizationId: string | null = null
   if (gymSlug && gymSlug !== "me") {
-    const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
-    if (gym) gymId = gym.id
+    const gym = await prisma.organization.findUnique({ where: { slug: gymSlug } })
+    if (gym) organizationId = gym.id
   }
 
   const rawData = {
@@ -32,8 +33,8 @@ export async function createWorkoutAction(formData: FormData): Promise<void> {
 
   const workout = await prisma.workout.create({
     data: {
-      userId: session.user.id!,
-      gymId,
+      userId: ctx.userId,
+      organizationId,
       name,
       durationMinutes: null,
       caloriesBurned: null,
@@ -41,6 +42,12 @@ export async function createWorkoutAction(formData: FormData): Promise<void> {
       exercises: [],
       isTemplate: true,
     }
+  })
+
+  await audit(ctx.userId, AuditAction.WORKOUT_CREATE, {
+    organizationId,
+    targetType: "Workout",
+    targetId: workout.id,
   })
 
   const basePath = `/${gymSlug}/dashboard`
@@ -65,56 +72,75 @@ export async function updateWorkoutExercisesAction(rawData: {
     notes?: string
   }>
 }) {
-  const session = await auth()
-  if (!session?.user) return { error: "Não autorizado" }
-
-  const { workoutId, gymSlug, exercises } = rawData
-
-  // Verifica se o treino pertence ao usuário ou se o usuário foi quem criou o treino (Coach)
-  const workout = await prisma.workout.findUnique({
-    where: { id: workoutId }
-  })
-
-  if (!workout) {
-    return { error: "Treino não encontrado." }
-  }
-
-  if (workout.userId !== session.user.id && workout.createdById !== session.user.id) {
-    return { error: "Sem permissão para alterar este treino." }
-  }
-
-  await prisma.workout.update({
-    where: { id: workoutId },
-    data: {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      exercises: exercises as any,
-    }
-  })
-
-  const basePath = `/${gymSlug}/dashboard`
-  revalidatePath(basePath)
-  revalidatePath(`${basePath}/workouts`)
-  revalidatePath(`${basePath}/workouts/${workoutId}`)
-  
-  return { data: "Exercícios atualizados com sucesso!" }
-}
-
-export async function deleteWorkoutAction(workoutId: string, gymSlug: string = "me") {
   try {
-    const session = await auth()
-    if (!session?.user) return { error: "Não autorizado" }
+    const ctx = await requireAuth()
 
-    // Verify ownership
+    const { workoutId, gymSlug, exercises } = rawData
+
+    // Anti-IDOR: busca o treino e verifica ownership no banco
     const workout = await prisma.workout.findUnique({
       where: { id: workoutId }
     })
 
-    if (!workout || workout.userId !== session.user.id) {
-      return { error: "Treino não encontrado ou sem permissão." }
+    if (!workout) {
+      return { error: "Treino não encontrado." }
     }
+
+    // Aceitar se é dono ou se é quem criou (Coach)
+    if (workout.userId !== ctx.userId && workout.createdById !== ctx.userId) {
+      return { error: "Sem permissão para alterar este treino." }
+    }
+
+    await prisma.workout.update({
+      where: { id: workoutId },
+      data: {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        exercises: exercises as any,
+      }
+    })
+
+    await audit(ctx.userId, AuditAction.WORKOUT_UPDATE, {
+      targetType: "Workout",
+      targetId: workoutId,
+      organizationId: workout.organizationId,
+    })
+
+    const basePath = `/${gymSlug}/dashboard`
+    revalidatePath(basePath)
+    revalidatePath(`${basePath}/workouts`)
+    revalidatePath(`${basePath}/workouts/${workoutId}`)
+    
+    return { data: "Exercícios atualizados com sucesso!" }
+  } catch (error) {
+    if (error instanceof AuthError) return { error: error.message }
+    console.error("Error updating exercises:", error)
+    return { error: "Erro ao atualizar exercícios." }
+  }
+}
+
+export async function deleteWorkoutAction(workoutId: string, gymSlug: string = "me") {
+  try {
+    const ctx = await requireAuth()
+
+    // Anti-IDOR: busca o treino e verifica ownership
+    const workout = await prisma.workout.findUnique({
+      where: { id: workoutId }
+    })
+
+    if (!workout) {
+      return { error: "Treino não encontrado." }
+    }
+
+    assertOwnership(workout.userId, ctx.userId, "treino")
 
     await prisma.workout.delete({
       where: { id: workoutId }
+    })
+
+    await audit(ctx.userId, AuditAction.WORKOUT_DELETE, {
+      targetType: "Workout",
+      targetId: workoutId,
+      organizationId: workout.organizationId,
     })
 
     const basePath = `/${gymSlug}/dashboard`
@@ -123,6 +149,7 @@ export async function deleteWorkoutAction(workoutId: string, gymSlug: string = "
     
     return { data: "Treino removido." }
   } catch (error) {
+    if (error instanceof AuthError) return { error: error.message }
     console.error("Error deleting workout:", error)
     return { error: "Erro ao remover o treino." }
   }

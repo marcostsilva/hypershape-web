@@ -1,11 +1,12 @@
 "use server"
 
-import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-
 import { Prisma } from "@prisma/client"
+import { sanitizeString } from "@/lib/sanitize"
+import { requireSuperAdmin, AuthError } from "@/lib/auth-guard"
+import { audit, AuditAction } from "@/lib/services/audit"
 
 function validateCNPJ(cnpj: string) {
   cnpj = cnpj.replace(/[^\d]+/g, '')
@@ -43,20 +44,20 @@ function validateCNPJ(cnpj: string) {
 }
 
 const gymSchema = z.object({
-  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres").transform(sanitizeString),
   slug: z.string().min(3, "Slug deve ter pelo menos 3 caracteres").toLowerCase(),
   cnpj: z.string().refine((val) => validateCNPJ(val), {
     message: "CNPJ inválido",
   }).optional().or(z.literal("")),
-  corporateName: z.string().optional().or(z.literal("")),
-  tradeName: z.string().optional().or(z.literal("")),
+  corporateName: z.string().optional().or(z.literal("")).transform(v => v ? sanitizeString(v) : v),
+  tradeName: z.string().optional().or(z.literal("")).transform(v => v ? sanitizeString(v) : v),
   
   // Endereço Estruturado
-  street: z.string().optional().or(z.literal("")),
+  street: z.string().optional().or(z.literal("")).transform(v => v ? sanitizeString(v) : v),
   number: z.string().optional().or(z.literal("")),
-  complement: z.string().optional().or(z.literal("")),
-  neighborhood: z.string().optional().or(z.literal("")),
-  city: z.string().optional().or(z.literal("")),
+  complement: z.string().optional().or(z.literal("")).transform(v => v ? sanitizeString(v) : v),
+  neighborhood: z.string().optional().or(z.literal("")).transform(v => v ? sanitizeString(v) : v),
+  city: z.string().optional().or(z.literal("")).transform(v => v ? sanitizeString(v) : v),
   state: z.string().optional().or(z.literal("")).refine(val => !val || val.length === 2, "UF deve ter 2 caracteres"),
   zipCode: z.string().optional().or(z.literal("")).refine(val => !val || /^\d{5}-?\d{3}$/.test(val), "CEP inválido"),
   
@@ -78,19 +79,12 @@ function handlePrismaError(error: any) {
   return error.message || "Ocorreu um erro inesperado no servidor."
 }
 
-async function checkSuperAdmin() {
-  const session = await auth()
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
-    throw new Error("Acesso negado: Somente Super Admins podem realizar esta operação.")
-  }
-  return session
-}
-
 export async function createGymAction(formData: z.infer<typeof gymSchema>) {
   try {
-    await checkSuperAdmin()
+    const ctx = await requireSuperAdmin()
     const validated = gymSchema.parse(formData)
     
+    let ownerId: string | null = null
     if (validated.ownerEmail) {
       const owner = await prisma.user.findUnique({
         where: { email: validated.ownerEmail }
@@ -98,26 +92,43 @@ export async function createGymAction(formData: z.infer<typeof gymSchema>) {
       if (!owner) {
         return { error: `Usuário com e-mail ${validated.ownerEmail} não encontrado. Cadastre o usuário primeiro.` }
       }
+      ownerId = owner.id
     }
 
-    const gym = await prisma.gym.create({
+    const gym = await prisma.organization.create({
       data: validated
     })
 
-    if (validated.ownerEmail) {
-      await prisma.user.update({
-        where: { email: validated.ownerEmail },
-        data: {
+    if (ownerId) {
+      await prisma.membership.upsert({
+        where: {
+          organizationId_userId: {
+            userId: ownerId,
+            organizationId: gym.id
+          }
+        },
+        update: {
+          role: 'ADMIN'
+        },
+        create: {
+          userId: ownerId,
+          organizationId: gym.id,
           role: 'ADMIN',
-          gymId: gym.id,
-          mode: 'MANAGED'
+          status: 'ACTIVE'
         }
       })
     }
+
+    await audit(ctx.userId, AuditAction.ORG_CREATE, {
+      targetType: "Organization",
+      targetId: gym.id,
+      metadata: { name: validated.name, slug: validated.slug, plan: validated.plan }
+    })
     
     revalidatePath("/admin")
     return { data: gym }
   } catch (error: any) {
+    if (error instanceof AuthError) return { error: error.message }
     console.error("Error creating gym:", error)
     return { error: handlePrismaError(error) }
   }
@@ -125,9 +136,10 @@ export async function createGymAction(formData: z.infer<typeof gymSchema>) {
 
 export async function updateGymAction(id: string, formData: z.infer<typeof gymSchema>) {
   try {
-    await checkSuperAdmin()
+    const ctx = await requireSuperAdmin()
     const validated = gymSchema.parse(formData)
     
+    let ownerId: string | null = null
     if (validated.ownerEmail) {
       const owner = await prisma.user.findUnique({
         where: { email: validated.ownerEmail }
@@ -135,28 +147,45 @@ export async function updateGymAction(id: string, formData: z.infer<typeof gymSc
       if (!owner) {
         return { error: `Usuário com e-mail ${validated.ownerEmail} não encontrado.` }
       }
+      ownerId = owner.id
     }
 
-    const gym = await prisma.gym.update({
+    const gym = await prisma.organization.update({
       where: { id },
       data: validated
     })
 
-    if (validated.ownerEmail) {
-      await prisma.user.update({
-        where: { email: validated.ownerEmail },
-        data: {
+    if (ownerId) {
+      await prisma.membership.upsert({
+        where: {
+          organizationId_userId: {
+            userId: ownerId,
+            organizationId: gym.id
+          }
+        },
+        update: {
+          role: 'ADMIN'
+        },
+        create: {
+          userId: ownerId,
+          organizationId: gym.id,
           role: 'ADMIN',
-          gymId: gym.id,
-          mode: 'MANAGED'
+          status: 'ACTIVE'
         }
       })
     }
+
+    await audit(ctx.userId, AuditAction.ORG_UPDATE, {
+      targetType: "Organization",
+      targetId: gym.id,
+      metadata: { name: validated.name, plan: validated.plan }
+    })
     
     revalidatePath("/admin")
     revalidatePath(`/admin/gyms/${id}`)
     return { data: gym }
   } catch (error: any) {
+    if (error instanceof AuthError) return { error: error.message }
     console.error("Error updating gym:", error)
     return { error: handlePrismaError(error) }
   }
@@ -164,11 +193,22 @@ export async function updateGymAction(id: string, formData: z.infer<typeof gymSc
 
 export async function deleteGymAction(id: string) {
   try {
-    await checkSuperAdmin()
-    await prisma.gym.delete({ where: { id } })
+    const ctx = await requireSuperAdmin()
+
+    const gym = await prisma.organization.findUnique({ where: { id }, select: { name: true, slug: true } })
+
+    await prisma.organization.delete({ where: { id } })
+
+    await audit(ctx.userId, AuditAction.ORG_DELETE, {
+      targetType: "Organization",
+      targetId: id,
+      metadata: { name: gym?.name, slug: gym?.slug }
+    })
+
     revalidatePath("/admin")
     return { success: true }
   } catch (error: any) {
+    if (error instanceof AuthError) return { error: error.message }
     console.error("Error deleting gym:", error)
     return { error: handlePrismaError(error) }
   }

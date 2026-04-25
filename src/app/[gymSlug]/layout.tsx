@@ -15,7 +15,7 @@ export default async function GymLayout({
     return <>{children}</>
   }
 
-  const gym = await prisma.gym.findUnique({
+  const gym = await prisma.organization.findUnique({
     where: { slug: gymSlug },
     select: {
       primaryColor: true,

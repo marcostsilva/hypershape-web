@@ -16,8 +16,10 @@ export const authConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.role = (user as any).role
-        token.gymId = (user as any).gymId
+        token.organizationId = (user as any).organizationId
+        token.gymSlug = (user as any).gymSlug
         token.isBlocked = (user as any).isBlocked
+        token.privacyVersion = (user as any).privacyVersion
       }
       return token
     },
@@ -25,8 +27,10 @@ export const authConfig = {
       if (session.user && token) {
         ;(session.user as any).id = token.sub
         ;(session.user as any).role = token.role
-        ;(session.user as any).gymId = token.gymId
+        ;(session.user as any).organizationId = token.organizationId
+        ;(session.user as any).gymSlug = token.gymSlug
         ;(session.user as any).isBlocked = token.isBlocked
+        ;(session.user as any).privacyVersion = token.privacyVersion
       }
       return session
     },

@@ -13,7 +13,15 @@ const getNavItems = (gymSlug: string) => [
   { name: "Medidas Corporais", href: `/${gymSlug}/dashboard/measurements`, icon: Ruler },
 ]
 
-export function Sidebar({ gymSlug: propGymSlug }: { gymSlug?: string }) {
+export function Sidebar({ 
+  gymSlug: propGymSlug,
+  gymLogo,
+  gymName
+}: { 
+  gymSlug?: string
+  gymLogo?: string | null
+  gymName?: string | null
+}) {
   const pathname = usePathname()
   const params = useParams()
   const { data: session } = useSession()
@@ -29,9 +37,23 @@ export function Sidebar({ gymSlug: propGymSlug }: { gymSlug?: string }) {
     <aside className="w-64 border-r border-white/5 bg-black/40 backdrop-blur-xl hidden md:flex flex-col h-full absolute inset-y-0 left-0 z-20">
       <div className="flex h-16 shrink-0 items-center px-6 border-b border-white/5">
         <Link href={`/${gymSlug}/dashboard`} className="flex items-center gap-2 group">
-          <Flame className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
-          <span className="font-heading font-bold text-xl tracking-tight text-white">
-            Hyper<span className="text-primary">Shape</span>
+          {gymLogo ? (
+            <Image 
+              src={gymLogo} 
+              alt={gymName || "Academia"} 
+              width={24} 
+              height={24} 
+              className="h-6 w-6 object-contain group-hover:scale-110 transition-transform" 
+            />
+          ) : (
+            <Flame className="h-6 w-6 text-primary group-hover:scale-110 transition-transform" />
+          )}
+          <span className="font-heading font-bold text-xl tracking-tight text-white truncate max-w-[160px]">
+            {gymName || (
+              <>
+                Hyper<span className="text-primary">Shape</span>
+              </>
+            )}
           </span>
         </Link>
       </div>

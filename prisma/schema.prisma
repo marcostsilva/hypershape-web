@@ -19,7 +19,29 @@ enum PlanTier {
   ENTERPRISE
 }
 
-model Gym {
+enum GlobalRole {
+  SUPER_ADMIN
+  USER
+}
+
+enum Mode {
+  INDEPENDENT
+  MANAGED
+}
+
+enum Role {
+  SELF
+  MEMBER
+  COACH
+  ADMIN
+}
+
+enum Tier {
+  FREE
+  PREMIUM
+}
+
+model Organization {
   id             String         @id @default(cuid())
   name           String
   slug           String         @unique
@@ -51,9 +73,10 @@ model Gym {
   
   measurements   Measurement[]
   notifications  Notification[]
-  users          User[]
-  gymStudents    GymStudent[]
+  memberships    Membership[]
   workouts       Workout[]
+
+  @@map("gyms")
 }
 
 model User {
@@ -62,28 +85,46 @@ model User {
   password              String?
   name                  String?
   image                 String?
-  gymId                 String?
-  mode                  Mode           @default(INDEPENDENT)
-  isManaged             Boolean        @default(false)
-  role                  Role           @default(SELF)
-  tier                  Tier           @default(FREE)
-  accessStatus          AccessStatus   @default(ACTIVE)
+  
+  // Camada Global
+  globalRole            GlobalRole     @default(USER)
   isBlocked             Boolean        @default(false)
   blockedReason         String?
   blockedAt             DateTime?
-  joinedGymAt           DateTime?
+  
+  // LGPD & Consentimento
+  acceptedTermsAt       DateTime?
+  privacyVersion        String?
+  
   createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
   emailVerified         DateTime?
+  
   measurementsCreated   Measurement[]  @relation("MeasurementCreator")
   measurements          Measurement[]  @relation("MeasurementOwner")
   notificationsSent     Notification[] @relation("NotificationSender")
   notificationsReceived Notification[] @relation("NotificationReceiver")
-  gym                   Gym?           @relation(fields: [gymId], references: [id])
-  gyms                  GymStudent[]
+  memberships           Membership[]
   workoutsCreated       Workout[]      @relation("WorkoutCreator")
   workouts              Workout[]      @relation("WorkoutOwner")
   accounts              Account[]
   sessions              Session[]
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role         @default(MEMBER)
+  status         AccessStatus @default(ACTIVE)
+  joinedAt       DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+  
+  @@unique([organizationId, userId])
+  @@map("memberships")
 }
 
 model Account {
@@ -127,7 +168,7 @@ model VerificationToken {
 model Workout {
   id              String   @id @default(cuid())
   userId          String
-  gymId           String?
+  organizationId  String?
   createdById     String?
   name            String
   exercises       Json
@@ -136,49 +177,43 @@ model Workout {
   performedAt     DateTime
   clientSideUuid  String?  @unique
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   isTemplate      Boolean  @default(false)
   createdBy       User?    @relation("WorkoutCreator", fields: [createdById], references: [id])
-  gym             Gym?     @relation(fields: [gymId], references: [id])
+  organization    Organization? @relation(fields: [organizationId], references: [id])
   user            User     @relation("WorkoutOwner", fields: [userId], references: [id])
 }
 
 model Measurement {
-  id           String   @id @default(cuid())
-  userId       String
-  gymId        String?
-  createdById  String?
-  weight       Float
-  bodyFat      Float?
-  measurements Json
-  measuredAt   DateTime
-  createdAt    DateTime @default(now())
-  createdBy    User?    @relation("MeasurementCreator", fields: [createdById], references: [id])
-  gym          Gym?     @relation(fields: [gymId], references: [id])
-  user         User     @relation("MeasurementOwner", fields: [userId], references: [id])
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String?
+  createdById    String?
+  weight         Float
+  bodyFat        Float?
+  measurements   Json
+  measuredAt     DateTime
+  clientSideUuid String?  @unique
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  createdBy      User?    @relation("MeasurementCreator", fields: [createdById], references: [id])
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+  user           User     @relation("MeasurementOwner", fields: [userId], references: [id])
 }
 
 model Notification {
-  id       String   @id @default(cuid())
-  userId   String
-  gymId    String?
-  senderId String?
-  title    String
-  body     String
-  isRead   Boolean  @default(false)
-  sentAt   DateTime @default(now())
-  gym      Gym?     @relation(fields: [gymId], references: [id])
-  sender   User?    @relation("NotificationSender", fields: [senderId], references: [id])
-  user     User     @relation("NotificationReceiver", fields: [userId], references: [id])
-}
-
-model GymStudent {
-  id        String   @id @default(cuid())
-  gymId     String
-  userId    String
-  status    AccessStatus @default(ACTIVE)
-  gym       Gym      @relation(fields: [gymId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
-  @@unique([gymId, userId])
+  id              String   @id @default(cuid())
+  userId          String
+  organizationId  String?
+  senderId        String?
+  title           String
+  body            String
+  isRead          Boolean  @default(false)
+  sentAt          DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  organization    Organization? @relation(fields: [organizationId], references: [id])
+  sender          User?    @relation("NotificationSender", fields: [senderId], references: [id])
+  user            User     @relation("NotificationReceiver", fields: [userId], references: [id])
 }
 
 model PasswordResetToken {
@@ -190,19 +225,20 @@ model PasswordResetToken {
   @@unique([email, token])
 }
 
-enum Mode {
-  INDEPENDENT
-  MANAGED
-}
+model AuditLog {
+  id             String   @id @default(cuid())
+  userId         String
+  organizationId String?
+  action         String   // Ex: "student.create", "branding.update", "user.delete"
+  targetType     String?  // Ex: "User", "Membership", "Organization"
+  targetId       String?  // ID do recurso afetado
+  metadata       Json?    // Detalhes adicionais (old/new values, IP, etc.)
+  ipAddress      String?
+  createdAt      DateTime @default(now())
 
-enum Role {
-  SELF
-  MEMBER
-  COACH
-  ADMIN
-}
-
-enum Tier {
-  FREE
-  PREMIUM
+  @@index([userId])
+  @@index([organizationId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
 }

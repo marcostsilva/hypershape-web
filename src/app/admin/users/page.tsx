@@ -11,7 +11,7 @@ export default async function GlobalUsersPage({
   const session = await auth()
   const { q } = await searchParams
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/")
   }
 
@@ -25,7 +25,11 @@ export default async function GlobalUsersPage({
     take: 50,
     orderBy: { createdAt: 'desc' },
     include: {
-      gym: { select: { name: true } }
+      memberships: {
+        include: {
+          organization: { select: { name: true } }
+        }
+      }
     }
   })
 
@@ -52,8 +56,8 @@ export default async function GlobalUsersPage({
             <tr className="bg-white/5 text-[10px] font-black uppercase tracking-widest text-zinc-500">
               <th className="px-6 py-4">Usuário</th>
               <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Função</th>
-              <th className="px-6 py-4">Academia</th>
+              <th className="px-6 py-4">Função Global</th>
+              <th className="px-6 py-4">Academia(s)</th>
               <th className="px-6 py-4">Cadastro</th>
               <th className="px-6 py-4">Ações</th>
             </tr>
@@ -82,11 +86,21 @@ export default async function GlobalUsersPage({
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-1.5 text-zinc-300 text-xs">
                     <Shield className="w-3 h-3 text-primary" />
-                    {user.role}
+                    {user.globalRole}
                   </div>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="text-xs text-zinc-400">{user.gym?.name || "Independente"}</span>
+                  <div className="flex flex-col gap-1">
+                    {user.memberships.length > 0 ? (
+                      user.memberships.map(m => (
+                        <span key={m.id} className="text-[10px] text-zinc-400">
+                          {m.organization.name} ({m.role})
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-[10px] text-zinc-600 italic">Independente</span>
+                    )}
+                  </div>
                 </td>
                 <td className="px-6 py-4">
                   <span className="text-xs text-zinc-500">{new Date(user.createdAt).toLocaleDateString('pt-BR')}</span>

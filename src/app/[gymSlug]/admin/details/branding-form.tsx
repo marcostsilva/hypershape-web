@@ -8,7 +8,7 @@ import { toast } from "sonner"
 import { useState } from "react"
 
 interface BrandingFormProps {
-  gymId: string
+  organizationId: string
   gymSlug: string
   initialPrimary: string | null
   initialSecondary: string | null
@@ -16,7 +16,7 @@ interface BrandingFormProps {
 }
 
 export function BrandingForm({ 
-  gymId, 
+  organizationId, 
   gymSlug, 
   initialPrimary, 
   initialSecondary, 
@@ -42,7 +42,7 @@ export function BrandingForm({
 
   return (
     <form action={handleSubmit} className="md:col-span-2 bg-zinc-950 border border-primary/20 rounded-3xl p-8 space-y-6">
-      <input type="hidden" name="gymId" value={gymId} />
+      <input type="hidden" name="organizationId" value={organizationId} />
       
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 text-white">

@@ -15,13 +15,17 @@ export default async function StudentsPage({
 
   if (!session?.user) redirect("/login")
 
-  const gymId = (session.user as any).gymId as string | null
-  if (!gymId) redirect(`/${gymSlug}/dashboard`)
+  const organizationId = (session.user as any).organizationId as string | null
+  if (!organizationId) redirect(`/${gymSlug}/dashboard`)
 
-  const students = await prisma.user.findMany({
-    where: { gymId },
-    select: { id: true, name: true, email: true, role: true, joinedGymAt: true },
-    orderBy: { joinedGymAt: "desc" },
+  const memberships = await prisma.membership.findMany({
+    where: { organizationId },
+    include: {
+      user: {
+        select: { id: true, name: true, email: true }
+      }
+    },
+    orderBy: { joinedAt: "desc" },
   })
 
   return (
@@ -34,7 +38,7 @@ export default async function StudentsPage({
           </div>
           <div>
             <h1 className="text-2xl font-heading font-bold text-white tracking-tight">Alunos</h1>
-            <p className="text-zinc-500 text-sm">{students.length} aluno{students.length !== 1 ? "s" : ""} cadastrado{students.length !== 1 ? "s" : ""}</p>
+            <p className="text-zinc-500 text-sm">{memberships.length} aluno{memberships.length !== 1 ? "s" : ""} cadastrado{memberships.length !== 1 ? "s" : ""}</p>
           </div>
         </div>
 
@@ -48,7 +52,7 @@ export default async function StudentsPage({
       </div>
 
       {/* Students List */}
-      {students.length === 0 ? (
+      {memberships.length === 0 ? (
         <div className="bg-white/5 border border-white/10 rounded-xl p-12 text-center backdrop-blur-xl">
           <Users className="h-12 w-12 text-zinc-600 mx-auto mb-4" />
           <h2 className="text-white font-medium mb-2">Nenhum aluno cadastrado</h2>
@@ -65,32 +69,32 @@ export default async function StudentsPage({
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-3">
-          {students.map((student) => (
+          {memberships.map((membership) => (
             <div
-              key={student.id}
+              key={membership.id}
               className="group relative flex items-center gap-4 p-4 bg-white/5 border border-white/10 rounded-xl hover:border-primary/40 hover:bg-white/8 transition-all backdrop-blur-xl"
             >
               <Link 
-                href={`/${gymSlug}/admin/students/${student.id}`}
+                href={`/${gymSlug}/admin/students/${membership.userId}`}
                 className="absolute inset-0 z-0"
               />
               
               {/* Avatar */}
               <div className="relative z-10 h-11 w-11 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary font-semibold text-lg flex-shrink-0">
-                {student.name?.charAt(0).toUpperCase() ?? "?"}
+                {membership.user.name?.charAt(0).toUpperCase() ?? "?"}
               </div>
 
               <div className="relative z-10 flex-1 min-w-0">
-                <p className="font-medium text-white truncate">{student.name ?? "Sem nome"}</p>
-                <p className="text-zinc-500 text-sm truncate">{student.email}</p>
+                <p className="font-medium text-white truncate">{membership.user.name ?? "Sem nome"}</p>
+                <p className="text-zinc-500 text-sm truncate">{membership.user.email}</p>
               </div>
 
               <div className="relative z-10 text-[10px] uppercase font-bold tracking-widest text-zinc-400 bg-white/5 px-2 py-1 rounded border border-white/5 flex-shrink-0">
-                {student.role}
+                {membership.role}
               </div>
 
               <div className="relative z-10 flex items-center gap-2">
-                <StudentActions studentId={student.id} studentName={student.name || ""} />
+                <StudentActions studentId={membership.userId} studentName={membership.user.name || ""} />
                 <ChevronRight className="h-4 w-4 text-zinc-600 group-hover:text-primary transition-colors" />
               </div>
             </div>

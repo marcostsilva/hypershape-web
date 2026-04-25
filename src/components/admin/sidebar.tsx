@@ -20,6 +20,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { signOut } from "next-auth/react"
 
+import Image from "next/image"
+
 interface SidebarItem {
   title: string
   href: string
@@ -29,9 +31,11 @@ interface SidebarItem {
 interface AdminSidebarProps {
   role: "SUPER_ADMIN" | "GYM_ADMIN"
   gymSlug?: string
+  gymLogo?: string | null
+  gymName?: string | null
 }
 
-export function AdminSidebar({ role, gymSlug }: AdminSidebarProps) {
+export function AdminSidebar({ role, gymSlug, gymLogo, gymName }: AdminSidebarProps) {
   const pathname = usePathname()
 
   const superAdminItems: SidebarItem[] = [
@@ -59,11 +63,25 @@ export function AdminSidebar({ role, gymSlug }: AdminSidebarProps) {
     <div className="w-64 bg-zinc-950 border-r border-white/5 h-screen sticky top-0 flex flex-col p-4">
       {/* Brand */}
       <div className="flex items-center gap-3 px-2 mb-10">
-        <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-black text-black">
-          H
-        </div>
-        <span className="font-black text-xl tracking-tighter text-white">
-          HYPER<span className="text-primary">SHAPE</span>
+        {gymLogo ? (
+          <Image 
+            src={gymLogo} 
+            alt={gymName || "Academia"} 
+            width={32} 
+            height={32} 
+            className="w-8 h-8 object-contain" 
+          />
+        ) : (
+          <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center font-black text-black">
+            {gymName ? gymName.charAt(0).toUpperCase() : "H"}
+          </div>
+        )}
+        <span className="font-black text-xl tracking-tighter text-white truncate">
+          {gymName ? gymName.toUpperCase() : (
+            <>
+              HYPER<span className="text-primary">SHAPE</span>
+            </>
+          )}
         </span>
       </div>
 
@@ -93,7 +111,7 @@ export function AdminSidebar({ role, gymSlug }: AdminSidebarProps) {
       {/* Footer */}
       <div className="pt-4 border-t border-white/5 space-y-2">
         <Link 
-          href="/me/dashboard"
+          href="/"
           className="flex items-center gap-3 px-4 py-3 rounded-xl text-zinc-500 hover:text-white transition-all text-xs font-bold"
         >
           <ChevronLeft className="w-4 h-4" />

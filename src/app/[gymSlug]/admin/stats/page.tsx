@@ -13,11 +13,11 @@ export default async function StatsPage({
   
   if (!session?.user) redirect("/login")
 
-  const gym = await prisma.gym.findUnique({
+  const gym = await prisma.organization.findUnique({
     where: { slug: gymSlug },
     include: {
       _count: {
-        select: { users: true, workouts: true }
+        select: { memberships: true, workouts: true }
       }
     }
   })
@@ -35,7 +35,7 @@ export default async function StatsPage({
         <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-6">
           <Users className="w-5 h-5 text-primary mb-4" />
           <p className="text-zinc-500 text-xs font-bold uppercase">Total Alunos</p>
-          <div className="text-3xl font-black text-white">{gym._count.users}</div>
+          <div className="text-3xl font-black text-white">{gym._count.memberships}</div>
         </div>
         <div className="bg-zinc-900/50 border border-white/5 rounded-2xl p-6">
           <Dumbbell className="w-5 h-5 text-emerald-500 mb-4" />

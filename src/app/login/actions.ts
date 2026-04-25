@@ -8,7 +8,7 @@ export async function loginWithCredentialsAction(
   formData: FormData
 ) {
   try {
-    formData.append("redirectTo", "/me/dashboard")
+    formData.append("redirectTo", "/")
     await signIn("credentials", formData)
   } catch (error) {
     if (error instanceof AuthError) {
@@ -24,5 +24,5 @@ export async function loginWithCredentialsAction(
 }
 
 export async function loginWithGoogleAction() {
-  await signIn("google", { redirectTo: "/me/dashboard" })
+  await signIn("google", { redirectTo: "/" })
 }

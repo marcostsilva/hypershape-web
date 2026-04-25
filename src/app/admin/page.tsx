@@ -18,20 +18,20 @@ import Link from "next/link"
 export default async function SuperAdminDashboardPage() {
   const session = await auth()
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/")
   }
 
   const [totalGyms, totalUsers, totalWorkouts, recentGyms] = await Promise.all([
-    prisma.gym.count(),
+    prisma.organization.count(),
     prisma.user.count(),
     prisma.workout.count(),
-    prisma.gym.findMany({
+    prisma.organization.findMany({
       take: 5,
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
-          select: { users: true }
+          select: { memberships: true }
         }
       }
     })
@@ -136,7 +136,7 @@ export default async function SuperAdminDashboardPage() {
                   </div>
                   <div>
                     <p className="text-white font-bold">{gym.name}</p>
-                    <p className="text-zinc-500 text-xs">{gym._count.users} alunos • {gym.plan}</p>
+                    <p className="text-zinc-500 text-xs">{gym._count.memberships} alunos • {gym.plan}</p>
                   </div>
                 </div>
                 <Link 

@@ -144,9 +144,22 @@ export function GymForm({ initialData }: GymFormProps) {
   async function onSubmit(data: GymFormValues) {
     setLoading(true)
     try {
+      const payload = {
+        ...data,
+        corporateName: data.corporateName ?? "",
+        tradeName: data.tradeName ?? "",
+        street: data.street ?? "",
+        number: data.number ?? "",
+        complement: data.complement ?? "",
+        neighborhood: data.neighborhood ?? "",
+        city: data.city ?? "",
+        state: data.state ?? "",
+        zipCode: data.zipCode ?? "",
+        cnpj: data.cnpj ?? "",
+      }
       const res = initialData 
-        ? await updateGymAction(initialData.id, data)
-        : await createGymAction(data)
+        ? await updateGymAction(initialData.id, payload)
+        : await createGymAction(payload)
 
       if (res.error) {
         toast.error(res.error)

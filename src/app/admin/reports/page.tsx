@@ -5,7 +5,7 @@ import { FileText, Download, Filter, Calendar, TrendingUp, Users, Building2 } fr
 export default async function GlobalReportsPage() {
   const session = await auth()
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/")
   }
 

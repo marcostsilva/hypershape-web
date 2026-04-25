@@ -11,11 +11,11 @@ export default async function EditGymPage({
   const { gymId } = await params
   const session = await auth()
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/")
   }
 
-  const gym = await prisma.gym.findUnique({
+  const gym = await prisma.organization.findUnique({
     where: { id: gymId }
   })
 

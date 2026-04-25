@@ -1,7 +1,6 @@
 import { auth } from "@/auth"
 import { redirect } from "next/navigation"
-import Link from "next/link"
-import { ArrowLeft } from "lucide-react"
+import { BackButton } from "@/components/back-button"
 import { StudentForm } from "./student-form"
 
 export default async function NewStudentPage({
@@ -19,12 +18,7 @@ export default async function NewStudentPage({
   return (
     <div className="max-w-xl mx-auto space-y-6">
       <div className="flex items-center gap-4 mb-8">
-        <Link 
-          href={`/${gymSlug}/admin/students`}
-          className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
+        <BackButton />
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight uppercase">
             Adicionar <span className="text-primary">Aluno</span>

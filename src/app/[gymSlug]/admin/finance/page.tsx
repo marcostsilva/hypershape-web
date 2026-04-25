@@ -13,7 +13,7 @@ export default async function FinancePage({
   
   if (!session?.user) redirect("/login")
 
-  const gym = await prisma.gym.findUnique({
+  const gym = await prisma.organization.findUnique({
     where: { slug: gymSlug }
   })
 

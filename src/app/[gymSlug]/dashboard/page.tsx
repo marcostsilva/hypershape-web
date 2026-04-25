@@ -74,22 +74,22 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
   const userId = session.user.id
   const user = session.user as any
 
-  let gymId: string | null = null
+  let organizationId: string | null = null
   let resolvedGymSlug = gymSlug
 
   if (gymSlug !== "me") {
-    const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
+    const gym = await prisma.organization.findUnique({ where: { slug: gymSlug } })
     if (!gym) redirect("/me/dashboard")
-    gymId = gym.id
-  } else if (user.gymId) {
+    organizationId = gym.id
+  } else if (user.organizationId) {
     // Se estiver em /me mas tiver uma academia vinculada, busca o slug dela
-    const gym = await prisma.gym.findUnique({ 
-      where: { id: user.gymId },
+    const gym = await prisma.organization.findUnique({ 
+      where: { id: user.organizationId },
       select: { slug: true, id: true }
     })
     if (gym) {
       resolvedGymSlug = gym.slug
-      gymId = gym.id
+      organizationId = gym.id
     }
   }
 
@@ -106,22 +106,22 @@ export default async function DashboardPage({ params }: { params: Promise<{ gymS
     caloriesAgg,
     recentMeasurements,
   ] = await Promise.all([
-    prisma.workout.count({ where: { userId, gymId, isTemplate: false } }),
+    prisma.workout.count({ where: { userId, organizationId, isTemplate: false } }),
     prisma.workout.findMany({
-      where: { userId, gymId, isTemplate: false, performedAt: { gte: startOfMonth } },
+      where: { userId, organizationId, isTemplate: false, performedAt: { gte: startOfMonth } },
       select: { durationMinutes: true, caloriesBurned: true, exercises: true },
     }),
     prisma.workout.findMany({
-      where: { userId, gymId, isTemplate: false },
+      where: { userId, organizationId, isTemplate: false },
       orderBy: { performedAt: "asc" },
       select: { performedAt: true, durationMinutes: true, caloriesBurned: true, exercises: true },
     }),
     prisma.workout.aggregate({
       _sum: { caloriesBurned: true },
-      where: { userId, gymId, isTemplate: false },
+      where: { userId, organizationId, isTemplate: false },
     }),
     prisma.measurement.findMany({
-      where: { userId, gymId },
+      where: { userId, organizationId },
       orderBy: { measuredAt: "asc" },
       select: { weight: true, bodyFat: true, measuredAt: true, measurements: true },
     }),

@@ -5,7 +5,7 @@ import { Settings, Shield, Bell, CreditCard, Database, Globe } from "lucide-reac
 export default async function AdminSettingsPage() {
   const session = await auth()
   
-  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).gymId) {
+  if (!session?.user || (session.user as any).role !== "ADMIN" || (session.user as any).organizationId) {
     redirect("/login")
   }
 

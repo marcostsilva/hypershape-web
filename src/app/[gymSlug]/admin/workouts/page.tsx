@@ -14,7 +14,7 @@ export default async function AdminWorkoutsPage({
   
   if (!session?.user) redirect("/login")
 
-  const gym = await prisma.gym.findUnique({
+  const gym = await prisma.organization.findUnique({
     where: { slug: gymSlug }
   })
 
@@ -22,7 +22,7 @@ export default async function AdminWorkoutsPage({
 
   const templates = await prisma.workout.findMany({
     where: {
-      gymId: gym.id,
+      organizationId: gym.id,
       isTemplate: true
     },
     orderBy: { createdAt: 'desc' }

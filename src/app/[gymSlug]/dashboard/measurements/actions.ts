@@ -1,20 +1,20 @@
 "use server"
 
-import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { CreateMeasurementSchema } from "@/lib/validations/features"
+import { requireAuth, assertOwnership, AuthError } from "@/lib/auth-guard"
+import { audit, AuditAction } from "@/lib/services/audit"
 
 export async function createMeasurementAction(formData: FormData) {
   try {
-    const session = await auth()
-    if (!session?.user) return { error: "Não autorizado" }
+    const ctx = await requireAuth()
 
     const gymSlug = formData.get("gymSlug") as string
-    let gymId: string | null = null
+    let organizationId: string | null = null
     if (gymSlug && gymSlug !== "me") {
-      const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
-      if (gym) gymId = gym.id
+      const gym = await prisma.organization.findUnique({ where: { slug: gymSlug } })
+      if (gym) organizationId = gym.id
     }
 
     const rawData = {
@@ -50,15 +50,21 @@ export async function createMeasurementAction(formData: FormData) {
       Object.entries(measurements).filter(([, v]) => v !== undefined && v !== null)
     )
 
-    await prisma.measurement.create({
+    const measurement = await prisma.measurement.create({
       data: {
-        userId: session.user.id!,
-        gymId: gymId,
+        userId: ctx.userId,
+        organizationId,
         weight,
         bodyFat: bodyFat || null,
         measuredAt,
         measurements: cleanMeasurements,
       }
+    })
+
+    await audit(ctx.userId, AuditAction.MEASUREMENT_CREATE, {
+      organizationId,
+      targetType: "Measurement",
+      targetId: measurement.id,
     })
 
     const basePath = `/${gymSlug}/dashboard`
@@ -67,6 +73,7 @@ export async function createMeasurementAction(formData: FormData) {
     
     return { data: "Medidas registradas com sucesso!" }
   } catch (error) {
+    if (error instanceof AuthError) return { error: error.message }
     console.error("Error creating measurement:", error)
     return { error: "Erro ao registrar as medidas." }
   }
@@ -74,19 +81,27 @@ export async function createMeasurementAction(formData: FormData) {
 
 export async function deleteMeasurementAction(measurementId: string, gymSlug: string = "me") {
   try {
-    const session = await auth()
-    if (!session?.user) return { error: "Não autorizado" }
+    const ctx = await requireAuth()
 
+    // Anti-IDOR: busca o recurso e valida ownership
     const measurement = await prisma.measurement.findUnique({
       where: { id: measurementId }
     })
 
-    if (!measurement || measurement.userId !== session.user.id) {
-      return { error: "Medida não encontrada ou sem permissão." }
+    if (!measurement) {
+      return { error: "Medida não encontrada." }
     }
+
+    assertOwnership(measurement.userId, ctx.userId, "medida")
 
     await prisma.measurement.delete({
       where: { id: measurementId }
+    })
+
+    await audit(ctx.userId, AuditAction.MEASUREMENT_DELETE, {
+      targetType: "Measurement",
+      targetId: measurementId,
+      organizationId: measurement.organizationId,
     })
 
     const basePath = `/${gymSlug}/dashboard`
@@ -95,6 +110,7 @@ export async function deleteMeasurementAction(measurementId: string, gymSlug: st
     
     return { data: "Registro removido." }
   } catch (error) {
+    if (error instanceof AuthError) return { error: error.message }
     console.error("Error deleting measurement:", error)
     return { error: "Erro ao remover o registro." }
   }

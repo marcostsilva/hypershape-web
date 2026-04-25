@@ -1,16 +1,17 @@
 "use server"
 
-import { auth } from "@/auth"
 import prisma from "@/lib/prisma"
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation"
-
-import { Prisma } from "@prisma/client"
 import { z } from "zod"
+import { Prisma } from "@prisma/client"
+import { sanitizeString } from "@/lib/sanitize"
+import { requireCoachOrAdmin, AuthError } from "@/lib/auth-guard"
+import { audit, AuditAction } from "@/lib/services/audit"
 
 const studentSchema = z.object({
   gymSlug: z.string(),
-  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres").transform(sanitizeString),
   email: z.string().email("E-mail inválido"),
 })
 
@@ -25,13 +26,13 @@ function handlePrismaError(error: any) {
 
 export async function createStudentAction(data: z.infer<typeof studentSchema>) {
   try {
-    const session = await auth()
-    if (!session?.user) throw new Error("Não autorizado")
-
     const validated = studentSchema.parse(data)
     const { gymSlug, name, email } = validated
 
-    const gym = await prisma.gym.findUnique({ where: { slug: gymSlug } })
+    // Auth Guard: verifica membership real no banco
+    const ctx = await requireCoachOrAdmin(gymSlug)
+
+    const gym = await prisma.organization.findUnique({ where: { slug: gymSlug } })
     if (!gym) throw new Error("Academia não encontrada.")
 
     // Validar capacidade do plano
@@ -39,36 +40,19 @@ export async function createStudentAction(data: z.infer<typeof studentSchema>) {
     await validateGymCapacity(gym.id)
 
     // Verificar se o e-mail já existe
-    const existingUser = await prisma.user.findUnique({ where: { email } })
+    let user = await prisma.user.findUnique({ where: { email } })
 
-    if (existingUser) {
-      if (existingUser.gymId === gym.id) {
-        return { error: "Este aluno já está cadastrado nesta academia." }
-      } else if (existingUser.gymId) {
-        return { error: "Este e-mail já está vinculado a outra academia." }
-      } else {
-        // Usuário existe mas não tem academia (INDEPENDENT/SELF). Vincula à academia.
-        await prisma.user.update({
-          where: { id: existingUser.id },
-          data: {
-            gymId: gym.id,
-            role: "MEMBER",
-            joinedGymAt: new Date(),
-          }
-        })
-      }
-    } else {
-      await prisma.user.create({
+    if (!user) {
+      // Criar usuário se não existir
+      user = await prisma.user.create({
         data: {
           name,
           email,
-          gymId: gym.id,
-          role: "MEMBER",
-          joinedGymAt: new Date(),
+          globalRole: 'USER'
         }
       })
 
-      // Gerar link de "ativação" (que na verdade é um reset de senha)
+      // Gerar link de "ativação" (reset de senha)
       const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
       const expires = new Date(Date.now() + (7 * 24 * 3600000)) // 7 dias
 
@@ -82,14 +66,44 @@ export async function createStudentAction(data: z.infer<typeof studentSchema>) {
         await sendPasswordResetEmail(email, token, name)
       } catch (mailError) {
         console.error("Erro ao enviar e-mail de ativação:", mailError)
-        // Não falha o cadastro se o e-mail falhar, mas avisa?
-        // Por enquanto vamos deixar passar.
       }
     }
+
+    // Verificar se já tem membership nesta academia
+    const existingMembership = await prisma.membership.findFirst({
+      where: {
+        userId: user.id,
+        organizationId: gym.id
+      }
+    })
+
+    if (existingMembership) {
+      return { error: "Este aluno já está vinculado a esta academia." }
+    }
+
+    // Criar o membership
+    const membership = await prisma.membership.create({
+      data: {
+        userId: user.id,
+        organizationId: gym.id,
+        role: "MEMBER",
+        status: "ACTIVE",
+        joinedAt: new Date()
+      }
+    })
+
+    // Audit log
+    await audit(ctx.userId, AuditAction.STUDENT_CREATE, {
+      organizationId: gym.id,
+      targetType: "User",
+      targetId: user.id,
+      metadata: { studentName: name, studentEmail: email, membershipId: membership.id }
+    })
 
     revalidatePath(`/${gymSlug}/admin/students`)
     return { success: true }
   } catch (error: any) {
+    if (error instanceof AuthError) return { error: error.message }
     console.error("Error creating student:", error)
     return { error: handlePrismaError(error) }
   }
